@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { User, UserRole } from '@/types';
 import { users } from '@/lib/data';
@@ -40,11 +39,19 @@ export default function UserManagement() {
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const [showAddEditDialog, setShowAddEditDialog] = useState(false);
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    id: string;
+    name: string;
+    email: string;
+    role: UserRole;
+    branch?: string;
+    subdistrict?: string;
+    city?: string;
+  }>({
     id: '',
     name: '',
     email: '',
-    role: 'branch_user' as UserRole,
+    role: 'branch_user',
     branch: '',
     subdistrict: '',
     city: ''
@@ -82,26 +89,29 @@ export default function UserManagement() {
   const handleEditUser = (user: User) => {
     setEditingUser(user);
     setFormData({
-      ...user
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      branch: user.branch || '',
+      subdistrict: user.subdistrict || '',
+      city: user.city || ''
     });
     setShowAddEditDialog(true);
   };
 
   const handleSaveUser = () => {
-    // Validate form data
     if (!formData.name || !formData.email || !formData.role) {
       toast.error('Please fill in all required fields');
       return;
     }
 
     if (editingUser) {
-      // Update existing user
       setUsersList(prev => 
         prev.map(user => user.id === editingUser.id ? formData : user)
       );
       toast.success('User updated successfully');
     } else {
-      // Add new user
       setUsersList(prev => [...prev, formData]);
       toast.success('User added successfully');
     }
@@ -122,7 +132,6 @@ export default function UserManagement() {
     }
   };
 
-  // Get role display name
   const getRoleDisplay = (role: string) => {
     switch (role) {
       case 'branch_user':
@@ -193,7 +202,6 @@ export default function UserManagement() {
           </Table>
         </div>
 
-        {/* Delete Confirmation Dialog */}
         <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
           <AlertDialogContent>
             <AlertDialogHeader>
@@ -212,7 +220,6 @@ export default function UserManagement() {
           </AlertDialogContent>
         </AlertDialog>
 
-        {/* Add/Edit User Dialog */}
         <AlertDialog open={showAddEditDialog} onOpenChange={setShowAddEditDialog}>
           <AlertDialogContent className="sm:max-w-md">
             <AlertDialogHeader>

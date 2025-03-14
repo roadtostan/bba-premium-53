@@ -34,7 +34,7 @@ import {
   SelectTrigger, 
   SelectValue 
 } from '@/components/ui/select';
-import { Building, City, MapPin, Pencil, Plus, Trash } from 'lucide-react';
+import { Building, MapPin, Landmark, Pencil, Plus, Trash } from 'lucide-react';
 import { branches, subdistricts, cities } from '@/lib/data';
 import { toast } from 'sonner';
 
@@ -263,7 +263,7 @@ export default function LocationManagement() {
               Subdistricts
             </TabsTrigger>
             <TabsTrigger value="cities" className="flex items-center gap-2">
-              <City className="h-4 w-4" />
+              <Landmark className="h-4 w-4" />
               Cities
             </TabsTrigger>
           </TabsList>
