@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '@/components/AuthContext';
@@ -483,7 +482,7 @@ export default function CreateReport() {
                     />
                   </div>
                   <div>
-                    <Label htmlFor={`expense-amount-${expense.id}`}>Amount {index + a1}</Label>
+                    <Label htmlFor={`expense-amount-${expense.id}`}>Amount {index + 1}</Label>
                     <Input
                       id={`expense-amount-${expense.id}`}
                       type="number"

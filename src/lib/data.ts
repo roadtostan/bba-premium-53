@@ -64,7 +64,39 @@ export const reports: Report[] = [
         userName: "Mike Admin",
         timestamp: "2023-06-01T16:45:00Z"
       }
-    ]
+    ],
+    locationInfo: {
+      cityName: "Metro City",
+      districtName: "North District",
+      branchName: "Branch A",
+      branchManager: "John Branch"
+    },
+    productInfo: {
+      initialStock: 100,
+      remainingStock: 20,
+      testers: 3,
+      rejects: 2,
+      sold: 75
+    },
+    expenseInfo: {
+      employeeSalary: 1000000,
+      employeeBonus: 200000,
+      cookingOil: 50000,
+      lpgGas: 75000,
+      plasticBags: 25000,
+      tissue: 15000,
+      soap: 10000,
+      otherExpenses: [
+        { id: "oe1", description: "Equipment maintenance", amount: 100000 }
+      ],
+      totalExpenses: 1475000
+    },
+    incomeInfo: {
+      cashReceipts: 1500000,
+      transferReceipts: 500000,
+      remainingIncome: 525000,
+      totalIncome: 2000000
+    }
   },
   {
     id: "r2",
@@ -81,7 +113,40 @@ export const reports: Report[] = [
     cityName: "Metro City",
     createdBy: "u1",
     createdAt: "2023-05-31T09:15:00Z",
-    updatedAt: "2023-06-01T11:10:00Z"
+    updatedAt: "2023-06-01T11:10:00Z",
+    locationInfo: {
+      cityName: "Metro City",
+      districtName: "North District",
+      branchName: "Branch A",
+      branchManager: "John Branch"
+    },
+    productInfo: {
+      initialStock: 500,
+      remainingStock: 50,
+      testers: 5,
+      rejects: 10,
+      sold: 435
+    },
+    expenseInfo: {
+      employeeSalary: 5000000,
+      employeeBonus: 1000000,
+      cookingOil: 200000,
+      lpgGas: 300000,
+      plasticBags: 100000,
+      tissue: 80000,
+      soap: 50000,
+      otherExpenses: [
+        { id: "oe1", description: "Advertising", amount: 250000 },
+        { id: "oe2", description: "Equipment repair", amount: 150000 }
+      ],
+      totalExpenses: 7130000
+    },
+    incomeInfo: {
+      cashReceipts: 5000000,
+      transferReceipts: 4500000,
+      remainingIncome: 2370000,
+      totalIncome: 9500000
+    }
   },
   {
     id: "r3",
@@ -98,7 +163,39 @@ export const reports: Report[] = [
     cityName: "Metro City",
     createdBy: "u2",
     createdAt: "2023-06-01T11:45:00Z",
-    updatedAt: "2023-06-01T11:45:00Z"
+    updatedAt: "2023-06-01T11:45:00Z",
+    locationInfo: {
+      cityName: "Metro City",
+      districtName: "South District",
+      branchName: "Branch B",
+      branchManager: "Sarah Branch"
+    },
+    productInfo: {
+      initialStock: 80,
+      remainingStock: 30,
+      testers: 2,
+      rejects: 1,
+      sold: 47
+    },
+    expenseInfo: {
+      employeeSalary: 900000,
+      employeeBonus: 0,
+      cookingOil: 40000,
+      lpgGas: 60000,
+      plasticBags: 20000,
+      tissue: 15000,
+      soap: 10000,
+      otherExpenses: [
+        { id: "oe1", description: "Renovation expenses", amount: 500000 }
+      ],
+      totalExpenses: 1545000
+    },
+    incomeInfo: {
+      cashReceipts: 800000,
+      transferReceipts: 650000,
+      remainingIncome: -95000,
+      totalIncome: 1450000
+    }
   },
   {
     id: "r4",
@@ -116,7 +213,39 @@ export const reports: Report[] = [
     createdBy: "u2",
     createdAt: "2023-05-31T10:30:00Z",
     updatedAt: "2023-06-01T13:20:00Z",
-    rejectionReason: "Please include the breakdown of product categories."
+    rejectionReason: "Please include the breakdown of product categories.",
+    locationInfo: {
+      cityName: "Metro City",
+      districtName: "South District",
+      branchName: "Branch B",
+      branchManager: "Sarah Branch"
+    },
+    productInfo: {
+      initialStock: 400,
+      remainingStock: 40,
+      testers: 5,
+      rejects: 5,
+      sold: 350
+    },
+    expenseInfo: {
+      employeeSalary: 4500000,
+      employeeBonus: 750000,
+      cookingOil: 180000,
+      lpgGas: 250000,
+      plasticBags: 90000,
+      tissue: 70000,
+      soap: 45000,
+      otherExpenses: [
+        { id: "oe1", description: "Marketing", amount: 300000 }
+      ],
+      totalExpenses: 6185000
+    },
+    incomeInfo: {
+      cashReceipts: 4000000,
+      transferReceipts: 3850000,
+      remainingIncome: 1665000,
+      totalIncome: 7850000
+    }
   },
   {
     id: "r5",
@@ -133,7 +262,37 @@ export const reports: Report[] = [
     cityName: "Metro City",
     createdBy: "u1",
     createdAt: "2023-06-02T08:30:00Z",
-    updatedAt: "2023-06-02T08:30:00Z"
+    updatedAt: "2023-06-02T08:30:00Z",
+    locationInfo: {
+      cityName: "Metro City",
+      districtName: "North District",
+      branchName: "Branch A",
+      branchManager: "John Branch"
+    },
+    productInfo: {
+      initialStock: 0,
+      remainingStock: 0,
+      testers: 0,
+      rejects: 0,
+      sold: 0
+    },
+    expenseInfo: {
+      employeeSalary: 0,
+      employeeBonus: 0,
+      cookingOil: 0,
+      lpgGas: 0,
+      plasticBags: 0,
+      tissue: 0,
+      soap: 0,
+      otherExpenses: [],
+      totalExpenses: 0
+    },
+    incomeInfo: {
+      cashReceipts: 0,
+      transferReceipts: 0,
+      remainingIncome: 0,
+      totalIncome: 0
+    }
   }
 ];
 
