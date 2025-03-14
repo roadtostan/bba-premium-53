@@ -1,6 +1,6 @@
 
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '@/components/AuthContext';
 import NavBar from '@/components/NavBar';
 import { Input } from '@/components/ui/input';
@@ -13,68 +13,140 @@ import { CalendarIcon, Loader2, Save, Send } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
-import { SalesItem } from '@/types';
+import { LocationInfo, ProductInfo, ExpenseInfo, IncomeInfo, OtherExpense } from '@/types';
 
 export default function CreateReport() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { id } = useParams();
+  const isEditMode = !!id;
 
   // Form state
-  const [title, setTitle] = useState('');
+  const [title, setTitle] = useState('Daily Sales Report');
   const [content, setContent] = useState('');
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDraft, setIsDraft] = useState(false);
   
-  // Sales items state
-  const [salesItems, setSalesItems] = useState<SalesItem[]>([
-    { id: '1', productName: '', quantity: 0, unitPrice: 0, totalPrice: 0 },
+  // Block I: Location Information
+  const [locationInfo, setLocationInfo] = useState<LocationInfo>({
+    cityName: user?.city || '',
+    districtName: user?.subdistrict || '',
+    branchName: user?.branch || '',
+    branchManager: user?.name || '',
+  });
+  
+  // Block II: Product Information
+  const [productInfo, setProductInfo] = useState<ProductInfo>({
+    initialStock: 0,
+    remainingStock: 0,
+    testers: 0,
+    rejects: 0,
+    sold: 0,
+  });
+  
+  // Block III: Expense Information
+  const [expenseInfo, setExpenseInfo] = useState<ExpenseInfo>({
+    employeeSalary: 0,
+    employeeBonus: 0,
+    cookingOil: 0,
+    lpgGas: 0,
+    plasticBags: 0,
+    tissue: 0,
+    soap: 0,
+    otherExpenses: [
+      { id: '1', description: '', amount: 0 },
+      { id: '2', description: '', amount: 0 },
+      { id: '3', description: '', amount: 0 },
+    ],
+    totalExpenses: 0,
+  });
+  
+  // Block IV: Income Information
+  const [incomeInfo, setIncomeInfo] = useState<IncomeInfo>({
+    cashReceipts: 0,
+    transferReceipts: 0,
+    remainingIncome: 0,
+    totalIncome: 0,
+  });
+
+  useEffect(() => {
+    // Calculate total expenses
+    const totalExpenses = 
+      expenseInfo.employeeSalary +
+      expenseInfo.employeeBonus +
+      expenseInfo.cookingOil +
+      expenseInfo.lpgGas +
+      expenseInfo.plasticBags +
+      expenseInfo.tissue +
+      expenseInfo.soap +
+      expenseInfo.otherExpenses.reduce((sum, expense) => sum + expense.amount, 0);
+    
+    // Calculate total income
+    const totalIncome = incomeInfo.cashReceipts + incomeInfo.transferReceipts;
+    
+    // Calculate remaining income (net)
+    const remainingIncome = totalIncome - totalExpenses;
+    
+    setExpenseInfo(prev => ({ ...prev, totalExpenses }));
+    setIncomeInfo(prev => ({ 
+      ...prev, 
+      totalIncome,
+      remainingIncome 
+    }));
+  }, [
+    expenseInfo.employeeSalary,
+    expenseInfo.employeeBonus,
+    expenseInfo.cookingOil,
+    expenseInfo.lpgGas,
+    expenseInfo.plasticBags,
+    expenseInfo.tissue,
+    expenseInfo.soap,
+    expenseInfo.otherExpenses,
+    incomeInfo.cashReceipts,
+    incomeInfo.transferReceipts
   ]);
+
+  // Calculate sales based on stock
+  useEffect(() => {
+    if (productInfo.initialStock >= productInfo.remainingStock) {
+      const sold = productInfo.initialStock - productInfo.remainingStock - productInfo.testers - productInfo.rejects;
+      setProductInfo(prev => ({ ...prev, sold: sold >= 0 ? sold : 0 }));
+    }
+  }, [productInfo.initialStock, productInfo.remainingStock, productInfo.testers, productInfo.rejects]);
 
   if (!user || user.role !== 'branch_user') {
     navigate('/');
     return null;
   }
 
-  const handleSalesItemChange = (id: string, field: keyof SalesItem, value: string | number) => {
-    const updatedItems = salesItems.map(item => {
-      if (item.id === id) {
-        const updatedItem = { ...item, [field]: value };
-        
-        // Recalculate total price if quantity or unit price changes
-        if (field === 'quantity' || field === 'unitPrice') {
-          updatedItem.totalPrice = updatedItem.quantity * updatedItem.unitPrice;
-        }
-        
-        return updatedItem;
-      }
-      return item;
-    });
-    
-    setSalesItems(updatedItems);
+  const handleLocationChange = (field: keyof LocationInfo, value: string) => {
+    setLocationInfo(prev => ({ ...prev, [field]: value }));
   };
 
-  const addSalesItem = () => {
-    const newId = (salesItems.length + 1).toString();
-    setSalesItems([...salesItems, { 
-      id: newId, 
-      productName: '', 
-      quantity: 0, 
-      unitPrice: 0, 
-      totalPrice: 0 
-    }]);
+  const handleProductChange = (field: keyof ProductInfo, value: number) => {
+    setProductInfo(prev => ({ ...prev, [field]: value }));
   };
 
-  const removeSalesItem = (id: string) => {
-    if (salesItems.length > 1) {
-      setSalesItems(salesItems.filter(item => item.id !== id));
-    } else {
-      toast.error("You need at least one sales item");
-    }
+  const handleExpenseChange = (field: keyof Omit<ExpenseInfo, 'otherExpenses' | 'totalExpenses'>, value: number) => {
+    setExpenseInfo(prev => ({ ...prev, [field]: value }));
   };
 
-  const calculateTotalSales = (): number => {
-    return salesItems.reduce((sum, item) => sum + item.totalPrice, 0);
+  const handleOtherExpenseChange = (id: string, field: 'description' | 'amount', value: string | number) => {
+    setExpenseInfo(prev => ({
+      ...prev,
+      otherExpenses: prev.otherExpenses.map(item => 
+        item.id === id ? { ...item, [field]: value } : item
+      )
+    }));
+  };
+
+  const handleIncomeChange = (field: keyof Omit<IncomeInfo, 'remainingIncome' | 'totalIncome'>, value: number) => {
+    setIncomeInfo(prev => ({ ...prev, [field]: value }));
+  };
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(amount);
   };
 
   const validateForm = (): boolean => {
@@ -93,13 +165,15 @@ export default function CreateReport() {
       return false;
     }
     
-    // Validate sales items
-    const invalidItems = salesItems.filter(
-      item => !item.productName.trim() || item.quantity <= 0 || item.unitPrice <= 0
-    );
+    // Validate location info
+    if (!locationInfo.cityName || !locationInfo.districtName || !locationInfo.branchName || !locationInfo.branchManager) {
+      toast.error("Please complete all location information");
+      return false;
+    }
     
-    if (invalidItems.length > 0) {
-      toast.error("Please complete all sales items with valid data");
+    // Validate product info
+    if (productInfo.initialStock < 0 || productInfo.testers > 5) {
+      toast.error("Invalid product information. Note: Testers cannot exceed 5");
       return false;
     }
     
@@ -139,7 +213,7 @@ export default function CreateReport() {
       <NavBar />
       <main className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto">
-          <h1 className="text-3xl font-bold mb-8">Create New Sales Report</h1>
+          <h1 className="text-3xl font-bold mb-8">{isEditMode ? 'Edit Sales Report' : 'Create New Sales Report'}</h1>
           
           <form onSubmit={(e) => handleSubmit(e, false)} className="space-y-8">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -150,7 +224,7 @@ export default function CreateReport() {
                     id="title"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
-                    placeholder="Monthly Sales Report"
+                    placeholder="Daily Sales Report"
                     className="mt-1"
                   />
                 </div>
@@ -195,89 +269,286 @@ export default function CreateReport() {
               </div>
             </div>
             
-            <div>
-              <h2 className="text-xl font-semibold mb-4">Sales Items</h2>
-              
-              <div className="space-y-4">
-                {salesItems.map((item, index) => (
-                  <div key={item.id} className="glass-panel p-4 rounded-lg border">
-                    <div className="flex justify-between items-center mb-2">
-                      <h3 className="font-medium">Item #{index + 1}</h3>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeSalesItem(item.id)}
-                        className="h-8 w-8 p-0"
-                        disabled={salesItems.length <= 1}
-                      >
-                        &times;
-                      </Button>
-                    </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                      <div>
-                        <Label htmlFor={`product-${item.id}`}>Product</Label>
-                        <Input
-                          id={`product-${item.id}`}
-                          value={item.productName}
-                          onChange={(e) => handleSalesItemChange(item.id, 'productName', e.target.value)}
-                          placeholder="Product name"
-                          className="mt-1"
-                        />
-                      </div>
-                      
-                      <div>
-                        <Label htmlFor={`quantity-${item.id}`}>Quantity</Label>
-                        <Input
-                          id={`quantity-${item.id}`}
-                          type="number"
-                          min="0"
-                          value={item.quantity || ''}
-                          onChange={(e) => handleSalesItemChange(item.id, 'quantity', Number(e.target.value))}
-                          placeholder="0"
-                          className="mt-1"
-                        />
-                      </div>
-                      
-                      <div>
-                        <Label htmlFor={`price-${item.id}`}>Unit Price ($)</Label>
-                        <Input
-                          id={`price-${item.id}`}
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={item.unitPrice || ''}
-                          onChange={(e) => handleSalesItemChange(item.id, 'unitPrice', Number(e.target.value))}
-                          placeholder="0.00"
-                          className="mt-1"
-                        />
-                      </div>
-                      
-                      <div>
-                        <Label>Total</Label>
-                        <div className="mt-1 py-2 px-3 border border-input rounded-md bg-muted/50">
-                          ${item.totalPrice.toFixed(2)}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-                
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={addSalesItem}
-                  className="w-full mt-2 button-transition"
-                >
-                  + Add Another Item
-                </Button>
+            {/* Block I: Location Information */}
+            <div className="glass-panel p-6 rounded-lg border">
+              <h2 className="text-xl font-semibold mb-4">Block I: Location Information</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="cityName">City Name</Label>
+                  <Input
+                    id="cityName"
+                    value={locationInfo.cityName}
+                    onChange={(e) => handleLocationChange('cityName', e.target.value)}
+                    placeholder="City name"
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="districtName">District Name</Label>
+                  <Input
+                    id="districtName"
+                    value={locationInfo.districtName}
+                    onChange={(e) => handleLocationChange('districtName', e.target.value)}
+                    placeholder="District name"
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="branchName">Branch Name</Label>
+                  <Input
+                    id="branchName"
+                    value={locationInfo.branchName}
+                    onChange={(e) => handleLocationChange('branchName', e.target.value)}
+                    placeholder="Branch name"
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="branchManager">Branch Manager</Label>
+                  <Input
+                    id="branchManager"
+                    value={locationInfo.branchManager}
+                    onChange={(e) => handleLocationChange('branchManager', e.target.value)}
+                    placeholder="Manager name"
+                    className="mt-1"
+                  />
+                </div>
               </div>
+            </div>
+            
+            {/* Block II: Product Information */}
+            <div className="glass-panel p-6 rounded-lg border">
+              <h2 className="text-xl font-semibold mb-4">Block II: Product Information (in items)</h2>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <Label htmlFor="initialStock">Initial Stock</Label>
+                  <Input
+                    id="initialStock"
+                    type="number"
+                    min="0"
+                    value={productInfo.initialStock || ''}
+                    onChange={(e) => handleProductChange('initialStock', Number(e.target.value))}
+                    placeholder="0"
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="remainingStock">Remaining Stock</Label>
+                  <Input
+                    id="remainingStock"
+                    type="number"
+                    min="0"
+                    max={productInfo.initialStock}
+                    value={productInfo.remainingStock || ''}
+                    onChange={(e) => handleProductChange('remainingStock', Number(e.target.value))}
+                    placeholder="0"
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="testers">Number of Testers (max 5)</Label>
+                  <Input
+                    id="testers"
+                    type="number"
+                    min="0"
+                    max="5"
+                    value={productInfo.testers || ''}
+                    onChange={(e) => handleProductChange('testers', Number(e.target.value))}
+                    placeholder="0"
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="rejects">Number of Rejects</Label>
+                  <Input
+                    id="rejects"
+                    type="number"
+                    min="0"
+                    value={productInfo.rejects || ''}
+                    onChange={(e) => handleProductChange('rejects', Number(e.target.value))}
+                    placeholder="0"
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="sold">Number Sold</Label>
+                  <div className="mt-1 py-2 px-3 border border-input rounded-md bg-muted/50">
+                    {productInfo.sold}
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            {/* Block III: Expense Information */}
+            <div className="glass-panel p-6 rounded-lg border">
+              <h2 className="text-xl font-semibold mb-4">Block III: Expense Information (in rupiah)</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="employeeSalary">Employee Salary</Label>
+                  <Input
+                    id="employeeSalary"
+                    type="number"
+                    min="0"
+                    value={expenseInfo.employeeSalary || ''}
+                    onChange={(e) => handleExpenseChange('employeeSalary', Number(e.target.value))}
+                    placeholder="0"
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="employeeBonus">Employee Bonus</Label>
+                  <Input
+                    id="employeeBonus"
+                    type="number"
+                    min="0"
+                    value={expenseInfo.employeeBonus || ''}
+                    onChange={(e) => handleExpenseChange('employeeBonus', Number(e.target.value))}
+                    placeholder="0"
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="cookingOil">Cooking Oil</Label>
+                  <Input
+                    id="cookingOil"
+                    type="number"
+                    min="0"
+                    value={expenseInfo.cookingOil || ''}
+                    onChange={(e) => handleExpenseChange('cookingOil', Number(e.target.value))}
+                    placeholder="0"
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="lpgGas">LPG Gas</Label>
+                  <Input
+                    id="lpgGas"
+                    type="number"
+                    min="0"
+                    value={expenseInfo.lpgGas || ''}
+                    onChange={(e) => handleExpenseChange('lpgGas', Number(e.target.value))}
+                    placeholder="0"
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="plasticBags">Plastic Bags</Label>
+                  <Input
+                    id="plasticBags"
+                    type="number"
+                    min="0"
+                    value={expenseInfo.plasticBags || ''}
+                    onChange={(e) => handleExpenseChange('plasticBags', Number(e.target.value))}
+                    placeholder="0"
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="tissue">Tissue</Label>
+                  <Input
+                    id="tissue"
+                    type="number"
+                    min="0"
+                    value={expenseInfo.tissue || ''}
+                    onChange={(e) => handleExpenseChange('tissue', Number(e.target.value))}
+                    placeholder="0"
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="soap">Soap</Label>
+                  <Input
+                    id="soap"
+                    type="number"
+                    min="0"
+                    value={expenseInfo.soap || ''}
+                    onChange={(e) => handleExpenseChange('soap', Number(e.target.value))}
+                    placeholder="0"
+                    className="mt-1"
+                  />
+                </div>
+              </div>
+              
+              <h3 className="text-lg font-medium mt-4 mb-2">Other Expenses</h3>
+              {expenseInfo.otherExpenses.map((expense, index) => (
+                <div key={expense.id} className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+                  <div>
+                    <Label htmlFor={`expense-desc-${expense.id}`}>Description {index + 1}</Label>
+                    <Input
+                      id={`expense-desc-${expense.id}`}
+                      value={expense.description}
+                      onChange={(e) => handleOtherExpenseChange(expense.id, 'description', e.target.value)}
+                      placeholder="Expense description"
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor={`expense-amount-${expense.id}`}>Amount {index + a1}</Label>
+                    <Input
+                      id={`expense-amount-${expense.id}`}
+                      type="number"
+                      min="0"
+                      value={expense.amount || ''}
+                      onChange={(e) => handleOtherExpenseChange(expense.id, 'amount', Number(e.target.value))}
+                      placeholder="0"
+                      className="mt-1"
+                    />
+                  </div>
+                </div>
+              ))}
               
               <div className="mt-4 p-4 border rounded-lg bg-muted/30">
                 <div className="flex justify-between items-center">
-                  <span className="font-semibold">Total Sales:</span>
-                  <span className="text-lg font-bold">${calculateTotalSales().toFixed(2)}</span>
+                  <span className="font-semibold">Total Expenses:</span>
+                  <span className="text-lg font-bold">{formatCurrency(expenseInfo.totalExpenses)}</span>
+                </div>
+              </div>
+            </div>
+            
+            {/* Block IV: Income Information */}
+            <div className="glass-panel p-6 rounded-lg border">
+              <h2 className="text-xl font-semibold mb-4">Block IV: Income Information (in rupiah)</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="cashReceipts">Cash Receipts</Label>
+                  <Input
+                    id="cashReceipts"
+                    type="number"
+                    min="0"
+                    value={incomeInfo.cashReceipts || ''}
+                    onChange={(e) => handleIncomeChange('cashReceipts', Number(e.target.value))}
+                    placeholder="0"
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="transferReceipts">Transfer Receipts</Label>
+                  <Input
+                    id="transferReceipts"
+                    type="number"
+                    min="0"
+                    value={incomeInfo.transferReceipts || ''}
+                    onChange={(e) => handleIncomeChange('transferReceipts', Number(e.target.value))}
+                    placeholder="0"
+                    className="mt-1"
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <Label htmlFor="totalIncome">Total Income</Label>
+                  <div className="mt-1 py-2 px-3 border border-input rounded-md bg-muted/50">
+                    {formatCurrency(incomeInfo.totalIncome)}
+                  </div>
+                </div>
+                <div className="md:col-span-2">
+                  <Label htmlFor="remainingIncome">Remaining Income (Net)</Label>
+                  <div className={cn(
+                    "mt-1 py-2 px-3 border rounded-md font-medium",
+                    incomeInfo.remainingIncome >= 0 
+                      ? "bg-status-approved/10 border-status-approved/30 text-status-approved" 
+                      : "bg-status-rejected/10 border-status-rejected/30 text-status-rejected"
+                  )}>
+                    {formatCurrency(incomeInfo.remainingIncome)}
+                  </div>
                 </div>
               </div>
             </div>
