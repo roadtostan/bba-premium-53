@@ -1,4 +1,3 @@
-
 import { User, Report, ReportStatus } from "@/types";
 
 // Mock Users
@@ -35,7 +34,28 @@ export const users: User[] = [
     email: "city@bolabolaayam.com",
     role: "city_admin",
     city: "Metro City"
+  },
+  {
+    id: "u5",
+    name: "Super Admin",
+    email: "admin@bolabolaayam.com",
+    role: "super_admin"
   }
+];
+
+// Branch, Subdistrict, and City data
+export const branches = [
+  { id: "b1", name: "Branch A", subdistrictId: "sd1" },
+  { id: "b2", name: "Branch B", subdistrictId: "sd2" }
+];
+
+export const subdistricts = [
+  { id: "sd1", name: "North District", cityId: "c1" },
+  { id: "sd2", name: "South District", cityId: "c1" }
+];
+
+export const cities = [
+  { id: "c1", name: "Metro City" }
 ];
 
 // Mock Reports

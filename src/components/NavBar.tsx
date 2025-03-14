@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Menu, X, User, LogOut, ChevronDown } from 'lucide-react';
+import { Menu, X, User, LogOut, ChevronDown, Users, Building } from 'lucide-react';
 import { useAuth } from './AuthContext';
 import {
   DropdownMenu,
@@ -28,6 +28,8 @@ export default function NavBar() {
         return 'Sub-district Admin';
       case 'city_admin':
         return 'City Admin';
+      case 'super_admin':
+        return 'Super Admin';
       default:
         return role;
     }
@@ -43,6 +45,10 @@ export default function NavBar() {
   const navItems = [
     { name: 'Dashboard', path: '/' },
     ...(user.role === 'branch_user' ? [{ name: 'Create Report', path: '/create-report' }] : []),
+    ...(user.role === 'super_admin' ? [
+      { name: 'User Management', path: '/admin/users' },
+      { name: 'Location Management', path: '/admin/locations' }
+    ] : []),
   ];
 
   return (
@@ -92,6 +98,25 @@ export default function NavBar() {
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
+                {user.role === 'super_admin' && (
+                  <>
+                    <DropdownMenuItem 
+                      className="cursor-pointer flex items-center gap-2"
+                      onClick={() => navigate('/admin/users')}
+                    >
+                      <Users className="h-4 w-4" />
+                      <span>User Management</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      className="cursor-pointer flex items-center gap-2"
+                      onClick={() => navigate('/admin/locations')}
+                    >
+                      <Building className="h-4 w-4" />
+                      <span>Location Management</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                  </>
+                )}
                 <DropdownMenuItem 
                   className="cursor-pointer flex items-center gap-2"
                   onClick={handleLogout}
