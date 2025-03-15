@@ -1,10 +1,8 @@
-
 import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
 import { User as AppUser } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Session, User } from '@supabase/supabase-js';
-import { useNavigate } from 'react-router-dom';
 
 interface AuthContextType {
   user: AppUser | null;
@@ -26,7 +24,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const navigate = useNavigate();
 
   useEffect(() => {
     // Set up Supabase auth state listener
@@ -63,7 +60,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               
               // If user just logged in and we're on the login page, redirect to dashboard
               if (event === 'SIGNED_IN' && window.location.pathname === '/login') {
-                navigate('/');
+                window.location.href = '/';
               }
             }
           } catch (error) {
@@ -72,7 +69,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } else {
           setUser(null);
           if (event === 'SIGNED_OUT') {
-            navigate('/login');
+            window.location.href = '/login';
           }
         }
         
@@ -124,7 +121,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       subscription.unsubscribe();
     };
-  }, [navigate]);
+  }, []);
 
   const login = async (email: string, password: string) => {
     setIsLoading(true);
@@ -204,6 +201,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSupabaseUser(null);
       setSession(null);
       toast.info('Logged out successfully');
+      window.location.href = '/login';
     } catch (err: any) {
       console.error('Error logging out:', err);
       toast.error('Error logging out');
