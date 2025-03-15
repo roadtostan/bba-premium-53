@@ -429,6 +429,22 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      get_profile_by_id: {
+        Args: {
+          user_id: string
+        }
+        Returns: {
+          branch: string | null
+          city: string | null
+          created_at: string
+          email: string | null
+          id: string
+          name: string | null
+          role: string
+          subdistrict: string | null
+          updated_at: string
+        }[]
+      }
       is_branch_manager: {
         Args: {
           branch_id: string
