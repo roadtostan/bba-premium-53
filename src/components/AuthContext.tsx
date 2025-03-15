@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
 import { User as AppUser } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
@@ -219,8 +220,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const name = `Demo ${role.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}`;
       
       // Check if user already exists
-      const { data: { users } } = await supabase.auth.admin.listUsers();
-      const existingUser = users?.find(u => u.email === email);
+      const { data, error: usersError } = await supabase.auth.admin.listUsers();
+      
+      if (usersError) throw usersError;
+      
+      // Fix the type issue by properly checking the data structure
+      const users = data?.users || [];
+      const existingUser = users.find(u => u.email === email);
       
       if (existingUser) {
         // User exists, just log in
@@ -230,7 +236,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       
       // Create new user
-      const { data, error: signUpError } = await supabase.auth.signUp({
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -240,7 +246,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       if (signUpError) throw signUpError;
       
-      if (data?.user) {
+      if (signUpData?.user) {
         // Update profile with role and location data
         let locationData = {};
         
@@ -255,7 +261,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const { error: updateError } = await supabase
           .from('profiles')
           .update({ role, ...locationData })
-          .eq('id', data.user.id);
+          .eq('id', signUpData.user.id);
         
         if (updateError) throw updateError;
         
