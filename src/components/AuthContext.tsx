@@ -14,6 +14,7 @@ interface AuthContextType {
   signUp: (email: string, password: string, name: string) => Promise<void>;
   loginWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
+  createDemoAccount: (role: 'branch_user' | 'subdistrict_admin' | 'city_admin') => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -207,6 +208,69 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       toast.error('Error logging out');
     }
   };
+  
+  const createDemoAccount = async (role: 'branch_user' | 'subdistrict_admin' | 'city_admin') => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const email = `demo-${role}@example.com`;
+      const password = 'demo123';
+      const name = `Demo ${role.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}`;
+      
+      // Check if user already exists
+      const { data: { users } } = await supabase.auth.admin.listUsers();
+      const existingUser = users?.find(u => u.email === email);
+      
+      if (existingUser) {
+        // User exists, just log in
+        await login(email, password);
+        toast.success(`Logged in as ${name}`);
+        return;
+      }
+      
+      // Create new user
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { name }
+        }
+      });
+      
+      if (signUpError) throw signUpError;
+      
+      if (data?.user) {
+        // Update profile with role and location data
+        let locationData = {};
+        
+        if (role === 'subdistrict_admin') {
+          locationData = { subdistrict: 'Kebayoran Baru' };
+        } else if (role === 'city_admin') {
+          locationData = { city: 'Jakarta Selatan' };
+        } else if (role === 'branch_user') {
+          locationData = { branch: 'Branch 1' };
+        }
+        
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .update({ role, ...locationData })
+          .eq('id', data.user.id);
+        
+        if (updateError) throw updateError;
+        
+        toast.success(`Created demo account for ${name}`);
+        
+        // Log in with the new account
+        await login(email, password);
+      }
+    } catch (err: any) {
+      setError(err.message);
+      toast.error(`Error creating demo account: ${err.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <AuthContext.Provider 
@@ -219,7 +283,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         login, 
         signUp, 
         loginWithGoogle, 
-        logout 
+        logout,
+        createDemoAccount 
       }}
     >
       {children}

@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Loader2, Mail } from 'lucide-react';
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from '@/components/ui/badge';
 
 export default function Login() {
   // Login form state
@@ -23,7 +24,7 @@ export default function Login() {
   const [signupAttempted, setSignupAttempted] = useState(false);
   
   // Authentication context
-  const { user, login, signUp, loginWithGoogle, isLoading, error } = useAuth();
+  const { user, login, signUp, loginWithGoogle, isLoading, error, createDemoAccount } = useAuth();
   const navigate = useNavigate();
 
   // If user is already logged in, redirect to dashboard
@@ -59,17 +60,29 @@ export default function Login() {
     await loginWithGoogle();
   };
 
-  // Provide sample logins for demo purposes
-  const demoLogins = [
-    { role: 'Branch User', email: 'branch1@bolabolaayam.com' },
-    { role: 'Sub-District Admin', email: 'subdistrict@bolabolaayam.com' },
-    { role: 'City Admin', email: 'city@bolabolaayam.com' }
-  ];
-
-  const setDemoLogin = (email: string) => {
-    setEmail(email);
-    setPassword('password'); // Using same password for all demo accounts
+  // Function to create a demo account for a specific role
+  const handleCreateDemoAccount = async (role: 'branch_user' | 'subdistrict_admin' | 'city_admin') => {
+    await createDemoAccount(role);
   };
+
+  // Demo account descriptions
+  const demoAccounts = [
+    { 
+      role: 'branch_user', 
+      label: 'Branch User',
+      description: 'Create and submit reports for a specific branch'
+    },
+    { 
+      role: 'subdistrict_admin', 
+      label: 'Sub-District Admin',
+      description: 'Review and approve reports from all branches in a sub-district'
+    },
+    { 
+      role: 'city_admin', 
+      label: 'City Admin',
+      description: 'Review and approve reports from all sub-districts in a city'
+    }
+  ] as const;
 
   return (
     <div className="min-h-screen flex flex-col justify-center py-12 sm:px-6 lg:px-8 animate-fadeIn">
@@ -353,16 +366,32 @@ export default function Login() {
             </div>
 
             <div className="mt-4 grid grid-cols-1 gap-3">
-              {demoLogins.map((demoLogin) => (
-                <Button
-                  key={demoLogin.email}
-                  variant="outline"
-                  type="button"
-                  className="button-transition"
-                  onClick={() => setDemoLogin(demoLogin.email)}
+              {demoAccounts.map((account) => (
+                <div 
+                  key={account.role}
+                  className="p-4 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors"
                 >
-                  Login as {demoLogin.role}
-                </Button>
+                  <div className="flex justify-between items-start mb-2">
+                    <h3 className="font-medium text-foreground">{account.label}</h3>
+                    <Badge variant="outline">{account.role}</Badge>
+                  </div>
+                  <p className="text-sm text-muted-foreground mb-3">{account.description}</p>
+                  <Button
+                    variant="default"
+                    size="sm"
+                    className="w-full"
+                    onClick={() => handleCreateDemoAccount(account.role)}
+                    disabled={isLoading}
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Creating...
+                      </>
+                    ) : (
+                      `Create ${account.label} Account`
+                    )}
+                  </Button>
+                </div>
               ))}
             </div>
           </div>
