@@ -4,6 +4,7 @@ import { User as AppUser } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Session, User } from '@supabase/supabase-js';
+import { useNavigate } from 'react-router-dom';
 
 interface AuthContextType {
   user: AppUser | null;
@@ -25,11 +26,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     // Set up Supabase auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, currentSession) => {
+        console.log("Auth state changed:", event, currentSession);
         setSession(currentSession);
         setSupabaseUser(currentSession?.user ?? null);
         
@@ -57,12 +60,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               };
               
               setUser(appUser);
+              
+              // If user just logged in and we're on the login page, redirect to dashboard
+              if (event === 'SIGNED_IN' && window.location.pathname === '/login') {
+                navigate('/');
+              }
             }
           } catch (error) {
             console.error('Error fetching user profile:', error);
           }
         } else {
           setUser(null);
+          if (event === 'SIGNED_OUT') {
+            navigate('/login');
+          }
         }
         
         setIsLoading(false);
@@ -113,7 +124,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
+  }, [navigate]);
 
   const login = async (email: string, password: string) => {
     setIsLoading(true);
@@ -170,7 +181,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/login`
+          redirectTo: `${window.location.origin}/`
         }
       });
       
