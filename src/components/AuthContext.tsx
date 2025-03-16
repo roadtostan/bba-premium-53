@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useEffect, ReactNode, useState } from 'react';
+
+import React, { createContext, useContext, useEffect, ReactNode } from 'react';
 import { User as AppUser } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 import { Session, User } from '@supabase/supabase-js';
@@ -7,11 +8,9 @@ import {
   fetchUserProfile,
   loginWithEmailPassword,
   signUpWithEmailPassword,
-  loginWithGoogle,
   logoutUser
 } from '@/services/authService';
 import { createDemoAccount } from '@/services/demoService';
-import { toast } from 'sonner';
 
 interface AuthContextType {
   user: AppUser | null;
@@ -21,7 +20,6 @@ interface AuthContextType {
   error: string | null;
   login: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, name: string) => Promise<void>;
-  loginWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
   createDemoAccount: (role: 'branch_user' | 'subdistrict_admin' | 'city_admin') => Promise<void>;
 }
@@ -39,51 +37,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isLoading,
     setIsLoading,
     error,
-    setError,
-    authInitialized,
-    setAuthInitialized
+    setError
   } = useAuthState();
-
-  const ensureUserProfile = async (currentUser: User) => {
-    console.log('Ensuring profile exists for user:', currentUser.id);
-    
-    try {
-      const appUser = await fetchUserProfile(currentUser.id);
-      
-      if (appUser) {
-        console.log('Found existing profile:', appUser);
-        setUser(appUser);
-        return true;
-      }
-      
-      const basicUser: AppUser = {
-        id: currentUser.id,
-        name: currentUser.user_metadata.name || currentUser.email?.split('@')[0] || 'User',
-        email: currentUser.email || '',
-        role: 'branch_user'
-      };
-      
-      setUser(basicUser);
-      
-      const { error: insertError } = await supabase.from('profiles').upsert({
-        id: currentUser.id,
-        name: basicUser.name,
-        email: basicUser.email,
-        role: basicUser.role
-      });
-      
-      if (insertError) {
-        console.error('Error creating profile:', insertError);
-        return false;
-      }
-      
-      console.log('Basic profile created successfully');
-      return true;
-    } catch (err) {
-      console.error('Error in ensureUserProfile:', err);
-      return false;
-    }
-  };
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -94,20 +49,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setSupabaseUser(currentSession?.user ?? null);
         
         if (currentSession?.user) {
-          const success = await ensureUserProfile(currentSession.user);
-          
-          if (success && event === 'SIGNED_IN' && window.location.pathname === '/login') {
-            window.location.href = '/';
+          try {
+            const profile = await fetchUserProfile(currentSession.user.id);
+            
+            if (profile) {
+              console.log('Setting user profile:', profile);
+              setUser(profile);
+            } else {
+              console.error('No profile found for user:', currentSession.user.id);
+              setUser(null);
+            }
+            
+            if (event === 'SIGNED_IN' && window.location.pathname === '/login') {
+              window.location.href = '/';
+            }
+          } catch (error) {
+            console.error('Error setting up user after auth state change:', error);
+            setUser(null);
           }
         } else {
           setUser(null);
-          if (event === 'SIGNED_OUT') {
-            window.location.href = '/login';
-          }
         }
         
         setIsLoading(false);
-        setAuthInitialized(true);
       }
     );
 
@@ -123,13 +87,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setSession(initialSession);
           setSupabaseUser(initialSession.user);
           
-          await ensureUserProfile(initialSession.user);
+          const profile = await fetchUserProfile(initialSession.user.id);
+          if (profile) {
+            console.log('Setting initial user profile:', profile);
+            setUser(profile);
+          } else {
+            console.error('No profile found for initial user:', initialSession.user.id);
+            setUser(null);
+          }
         }
       } catch (error) {
         console.error('Error initializing auth:', error);
       } finally {
         setIsLoading(false);
-        setAuthInitialized(true);
       }
     };
 
@@ -138,7 +108,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       subscription.unsubscribe();
     };
-  }, [setUser, setSupabaseUser, setSession, setIsLoading, setAuthInitialized]);
+  }, [setUser, setSupabaseUser, setSession, setIsLoading]);
 
   const login = async (email: string, password: string) => {
     setIsLoading(true);
@@ -160,18 +130,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { error } = await signUpWithEmailPassword(email, password, name);
       if (error) setError(error);
     } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleLoginWithGoogle = async () => {
-    setIsLoading(true);
-    setError(null);
-    
-    try {
-      const { error } = await loginWithGoogle();
-      if (error) setError(error);
-    } catch (err) {
       setIsLoading(false);
     }
   };
@@ -202,7 +160,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         error, 
         login, 
         signUp, 
-        loginWithGoogle: handleLoginWithGoogle, 
         logout,
         createDemoAccount: handleCreateDemoAccount
       }}
