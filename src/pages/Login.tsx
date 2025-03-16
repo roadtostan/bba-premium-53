@@ -1,15 +1,14 @@
-
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/components/AuthContext';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Loader2 } from 'lucide-react';
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/components/AuthContext";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Loader2 } from "lucide-react";
 
 export default function Login() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [loginAttempted, setLoginAttempted] = useState(false);
   const { user, login, isLoading, error } = useAuth();
   const navigate = useNavigate();
@@ -17,29 +16,45 @@ export default function Login() {
   // If user is already logged in, redirect to dashboard
   useEffect(() => {
     if (user) {
-      navigate('/');
+      navigate("/");
     }
   }, [user, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginAttempted(true);
-    
+
     if (!email || !password) return;
-    
-    await login(email, password);
+
+    try {
+      await login(email, password);
+    } catch (err) {
+      console.error("Login error:", err);
+    }
   };
 
-  // Provide sample logins for demo purposes
+  // Demo logins dengan password yang sesuai di Supabase
   const demoLogins = [
-    { role: 'Branch User', email: 'branch1@bolabolaayam.com' },
-    { role: 'Sub-District Admin', email: 'subdistrict@bolabolaayam.com' },
-    { role: 'City Admin', email: 'city@bolabolaayam.com' }
+    {
+      role: "Branch User",
+      email: "branch1@bolabolaayam.com",
+      password: "branch1",
+    },
+    {
+      role: "Sub-District Admin",
+      email: "subdistrict@bolabolaayam.com",
+      password: "subdistrict",
+    },
+    {
+      role: "City Admin",
+      email: "city@bolabolaayam.com",
+      password: "city",
+    },
   ];
 
-  const setDemoLogin = (email: string) => {
+  const setDemoLogin = (email: string, password: string) => {
     setEmail(email);
-    setPassword('password'); // Using same password for all demo accounts
+    setPassword(password);
   };
 
   return (
@@ -65,7 +80,7 @@ export default function Login() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className={loginAttempted && !email ? 'border-red-500' : ''}
+                  className={loginAttempted && !email ? "border-red-500" : ""}
                 />
               </div>
               {loginAttempted && !email && (
@@ -84,11 +99,15 @@ export default function Login() {
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className={loginAttempted && !password ? 'border-red-500' : ''}
+                  className={
+                    loginAttempted && !password ? "border-red-500" : ""
+                  }
                 />
               </div>
               {loginAttempted && !password && (
-                <p className="mt-1 text-sm text-red-600">Password is required</p>
+                <p className="mt-1 text-sm text-red-600">
+                  Password is required
+                </p>
               )}
             </div>
 
@@ -100,14 +119,19 @@ export default function Login() {
               >
                 {isLoading ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Logging in...
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Logging
+                    in...
                   </>
                 ) : (
-                  'Sign in'
+                  "Sign in"
                 )}
               </Button>
             </div>
           </form>
+
+          {error && (
+            <div className="mt-2 text-sm text-red-600 text-center">{error}</div>
+          )}
 
           <div className="mt-8">
             <div className="relative">
@@ -128,7 +152,9 @@ export default function Login() {
                   variant="outline"
                   type="button"
                   className="button-transition"
-                  onClick={() => setDemoLogin(demoLogin.email)}
+                  onClick={() =>
+                    setDemoLogin(demoLogin.email, demoLogin.password)
+                  }
                 >
                   Login as {demoLogin.role}
                 </Button>

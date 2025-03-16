@@ -1,80 +1,65 @@
-
-import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
-import { User } from '@/types';
-import { findUserByEmail } from '@/lib/data';
-import { toast } from 'sonner';
+import React, { createContext, useContext, useState, useEffect } from "react";
+import { signInWithEmail, signOut, getCurrentUser } from "@/lib/db";
+import type { User } from "@/types";
+import { toast } from "sonner";
 
 interface AuthContextType {
   user: User | null;
+  login: (email: string, password: string) => Promise<void>;
+  logout: () => Promise<void>;
   isLoading: boolean;
   error: string | null;
-  login: (email: string, password: string) => Promise<void>;
-  logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export function AuthProvider({ children }: { children: ReactNode }) {
+export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Check for saved user on initial load
   useEffect(() => {
-    const savedUser = localStorage.getItem('user');
-    if (savedUser) {
+    async function loadUser() {
       try {
-        setUser(JSON.parse(savedUser));
-      } catch (e) {
-        console.error('Failed to parse saved user', e);
-        localStorage.removeItem('user');
+        const userData = await getCurrentUser();
+        setUser(userData);
+      } catch (err) {
+        console.error("Error loading user:", err);
+      } finally {
+        setIsLoading(false);
       }
     }
-    setIsLoading(false);
+    loadUser();
   }, []);
 
   const login = async (email: string, password: string) => {
-    setIsLoading(true);
-    setError(null);
-    
     try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 800));
-      
-      // In a real app, you would validate credentials with your backend
-      // For now, we'll just check against our mock data
-      // Note: We're ignoring password for this demo
-      const foundUser = findUserByEmail(email);
-      
-      if (!foundUser) {
-        throw new Error('Invalid credentials');
-      }
-      
-      // Save user to state and localStorage
-      setUser(foundUser);
-      localStorage.setItem('user', JSON.stringify(foundUser));
-      toast.success('Logged in successfully');
+      setError(null);
+      setIsLoading(true);
+      const userData = await signInWithEmail(email, password);
+      setUser(userData);
+      toast.success("Logged in successfully");
     } catch (err) {
-      if (err instanceof Error) {
-        setError(err.message);
-        toast.error(err.message);
-      } else {
-        setError('An unknown error occurred');
-        toast.error('An unknown error occurred');
-      }
+      setError("Login gagal. Periksa email dan password Anda.");
+      console.error("Login error:", err);
+      toast.error("Login gagal. Periksa email dan password Anda.");
     } finally {
       setIsLoading(false);
     }
   };
 
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem('user');
-    toast.info('Logged out successfully');
+  const logout = async () => {
+    try {
+      await signOut();
+      setUser(null);
+      toast.info("Logged out successfully");
+    } catch (err) {
+      console.error("Logout error:", err);
+    }
   };
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, error, login, logout }}>
+    <AuthContext.Provider value={{ user, login, logout, isLoading, error }}>
       {children}
     </AuthContext.Provider>
   );
@@ -83,7 +68,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 }
