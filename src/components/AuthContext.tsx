@@ -1,5 +1,4 @@
-
-import React, { createContext, useContext, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useEffect, ReactNode, useState } from 'react';
 import { User as AppUser } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 import { Session, User } from '@supabase/supabase-js';
@@ -12,6 +11,7 @@ import {
   logoutUser
 } from '@/services/authService';
 import { createDemoAccount } from '@/services/demoService';
+import { toast } from 'sonner';
 
 interface AuthContextType {
   user: AppUser | null;
@@ -42,8 +42,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setError
   } = useAuthState();
 
+  const [profileLoadAttempted, setProfileLoadAttempted] = useState(false);
+
   useEffect(() => {
-    // Set up Supabase auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, currentSession) => {
         console.log("Auth state changed:", event, currentSession);
@@ -51,14 +52,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setSupabaseUser(currentSession?.user ?? null);
         
         if (currentSession?.user) {
+          setProfileLoadAttempted(false);
           const appUser = await fetchUserProfile(currentSession.user.id);
           
           if (appUser) {
             setUser(appUser);
             
-            // If user just logged in and we're on the login page, redirect to dashboard
             if (event === 'SIGNED_IN' && window.location.pathname === '/login') {
               window.location.href = '/';
+            }
+          } else {
+            const basicUser: AppUser = {
+              id: currentSession.user.id,
+              name: currentSession.user.user_metadata.name || currentSession.user.email?.split('@')[0] || 'User',
+              email: currentSession.user.email || '',
+              role: 'branch_user'
+            };
+            
+            setUser(basicUser);
+            
+            try {
+              await supabase.from('profiles').upsert({
+                id: currentSession.user.id,
+                name: basicUser.name,
+                email: basicUser.email,
+                role: basicUser.role
+              });
+              
+              toast.success('Profile updated');
+              
+              if (event === 'SIGNED_IN' && window.location.pathname === '/login') {
+                window.location.href = '/';
+              }
+            } catch (err) {
+              console.error('Error updating profile:', err);
             }
           }
         } else {
@@ -72,9 +99,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     );
 
-    // Check for existing session on initial load
     const initializeAuth = async () => {
       try {
+        setIsLoading(true);
         const { data: { session: initialSession } } = await supabase.auth.getSession();
         
         if (initialSession?.user) {
@@ -84,6 +111,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const appUser = await fetchUserProfile(initialSession.user.id);
           if (appUser) {
             setUser(appUser);
+          } else if (!profileLoadAttempted) {
+            setProfileLoadAttempted(true);
+            
+            const basicUser: AppUser = {
+              id: initialSession.user.id,
+              name: initialSession.user.user_metadata.name || initialSession.user.email?.split('@')[0] || 'User',
+              email: initialSession.user.email || '',
+              role: 'branch_user'
+            };
+            
+            setUser(basicUser);
+            
+            try {
+              await supabase.from('profiles').upsert({
+                id: initialSession.user.id,
+                name: basicUser.name,
+                email: basicUser.email,
+                role: basicUser.role
+              });
+              
+              console.log('Profile created/updated for user:', initialSession.user.id);
+            } catch (err) {
+              console.error('Error updating profile:', err);
+            }
           }
         }
       } catch (error) {
@@ -98,7 +149,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       subscription.unsubscribe();
     };
-  }, [setUser, setSupabaseUser, setSession, setIsLoading]);
+  }, [setUser, setSupabaseUser, setSession, setIsLoading, profileLoadAttempted, setProfileLoadAttempted]);
 
   const login = async (email: string, password: string) => {
     setIsLoading(true);

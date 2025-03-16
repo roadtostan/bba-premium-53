@@ -5,23 +5,54 @@ import { toast } from 'sonner';
 
 export async function fetchUserProfile(userId: string): Promise<AppUser | null> {
   try {
-    // Use the new security definer function to get the profile
+    // Use the security definer function to get the profile
     const { data, error } = await supabase
-      .rpc('get_profile_by_id', { user_id: userId })
-      .single();
+      .rpc('get_profile_by_id', { user_id: userId });
     
-    if (error) throw error;
+    if (error) {
+      console.error('Error fetching profile with RPC:', error);
+      
+      // Fallback: Try direct query if RPC fails
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+      
+      if (profileError) {
+        console.error('Fallback profile fetch failed:', profileError);
+        return null;
+      }
+      
+      if (profileData) {
+        // Transform the profile into an AppUser
+        const appUser: AppUser = {
+          id: profileData.id,
+          name: profileData.name || 'User',
+          email: profileData.email || '',
+          role: profileData.role as any,
+          branch: profileData.branch || undefined,
+          subdistrict: profileData.subdistrict || undefined,
+          city: profileData.city || undefined
+        };
+        
+        return appUser;
+      }
+      
+      return null;
+    }
     
-    if (data) {
+    if (data && data.length > 0) {
+      const profile = data[0];
       // Transform the profile into an AppUser
       const appUser: AppUser = {
-        id: data.id,
-        name: data.name || 'User',
-        email: data.email || '',
-        role: data.role as any,
-        branch: data.branch || undefined,
-        subdistrict: data.subdistrict || undefined,
-        city: data.city || undefined
+        id: profile.id,
+        name: profile.name || 'User',
+        email: profile.email || '',
+        role: profile.role as any,
+        branch: profile.branch || undefined,
+        subdistrict: profile.subdistrict || undefined,
+        city: profile.city || undefined
       };
       
       return appUser;
