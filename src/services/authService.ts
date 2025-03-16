@@ -5,35 +5,40 @@ import { toast } from 'sonner';
 
 export async function fetchUserProfile(userId: string): Promise<AppUser | null> {
   try {
-    // Use the security definer function to get the profile
-    const { data, error } = await supabase
-      .rpc('get_profile_by_id', { user_id: userId });
+    console.log('Fetching profile for user:', userId);
     
-    if (error) {
-      console.error('Error fetching profile with RPC:', error);
+    // Try direct query first - more reliable than RPC
+    const { data: profileData, error: profileError } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .single();
+    
+    if (profileError) {
+      console.error('Direct profile fetch failed:', profileError);
       
-      // Fallback: Try direct query if RPC fails
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
+      // Fallback: Try RPC if direct query fails
+      const { data, error } = await supabase
+        .rpc('get_profile_by_id', { user_id: userId });
       
-      if (profileError) {
-        console.error('Fallback profile fetch failed:', profileError);
+      if (error) {
+        console.error('RPC profile fetch also failed:', error);
         return null;
       }
       
-      if (profileData) {
+      if (data && data.length > 0) {
+        const profile = data[0];
+        console.log('Profile fetched via RPC:', profile);
+        
         // Transform the profile into an AppUser
         const appUser: AppUser = {
-          id: profileData.id,
-          name: profileData.name || 'User',
-          email: profileData.email || '',
-          role: profileData.role as any,
-          branch: profileData.branch || undefined,
-          subdistrict: profileData.subdistrict || undefined,
-          city: profileData.city || undefined
+          id: profile.id,
+          name: profile.name || 'User',
+          email: profile.email || '',
+          role: profile.role as any,
+          branch: profile.branch || undefined,
+          subdistrict: profile.subdistrict || undefined,
+          city: profile.city || undefined
         };
         
         return appUser;
@@ -42,17 +47,18 @@ export async function fetchUserProfile(userId: string): Promise<AppUser | null> 
       return null;
     }
     
-    if (data && data.length > 0) {
-      const profile = data[0];
+    if (profileData) {
+      console.log('Profile fetched directly:', profileData);
+      
       // Transform the profile into an AppUser
       const appUser: AppUser = {
-        id: profile.id,
-        name: profile.name || 'User',
-        email: profile.email || '',
-        role: profile.role as any,
-        branch: profile.branch || undefined,
-        subdistrict: profile.subdistrict || undefined,
-        city: profile.city || undefined
+        id: profileData.id,
+        name: profileData.name || 'User',
+        email: profileData.email || '',
+        role: profileData.role as any,
+        branch: profileData.branch || undefined,
+        subdistrict: profileData.subdistrict || undefined,
+        city: profileData.city || undefined
       };
       
       return appUser;

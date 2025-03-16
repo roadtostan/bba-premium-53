@@ -39,54 +39,65 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isLoading,
     setIsLoading,
     error,
-    setError
+    setError,
+    authInitialized,
+    setAuthInitialized
   } = useAuthState();
 
-  const [profileLoadAttempted, setProfileLoadAttempted] = useState(false);
+  const ensureUserProfile = async (currentUser: User) => {
+    console.log('Ensuring profile exists for user:', currentUser.id);
+    
+    try {
+      const appUser = await fetchUserProfile(currentUser.id);
+      
+      if (appUser) {
+        console.log('Found existing profile:', appUser);
+        setUser(appUser);
+        return true;
+      }
+      
+      const basicUser: AppUser = {
+        id: currentUser.id,
+        name: currentUser.user_metadata.name || currentUser.email?.split('@')[0] || 'User',
+        email: currentUser.email || '',
+        role: 'branch_user'
+      };
+      
+      setUser(basicUser);
+      
+      const { error: insertError } = await supabase.from('profiles').upsert({
+        id: currentUser.id,
+        name: basicUser.name,
+        email: basicUser.email,
+        role: basicUser.role
+      });
+      
+      if (insertError) {
+        console.error('Error creating profile:', insertError);
+        return false;
+      }
+      
+      console.log('Basic profile created successfully');
+      return true;
+    } catch (err) {
+      console.error('Error in ensureUserProfile:', err);
+      return false;
+    }
+  };
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, currentSession) => {
         console.log("Auth state changed:", event, currentSession);
+        
         setSession(currentSession);
         setSupabaseUser(currentSession?.user ?? null);
         
         if (currentSession?.user) {
-          setProfileLoadAttempted(false);
-          const appUser = await fetchUserProfile(currentSession.user.id);
+          const success = await ensureUserProfile(currentSession.user);
           
-          if (appUser) {
-            setUser(appUser);
-            
-            if (event === 'SIGNED_IN' && window.location.pathname === '/login') {
-              window.location.href = '/';
-            }
-          } else {
-            const basicUser: AppUser = {
-              id: currentSession.user.id,
-              name: currentSession.user.user_metadata.name || currentSession.user.email?.split('@')[0] || 'User',
-              email: currentSession.user.email || '',
-              role: 'branch_user'
-            };
-            
-            setUser(basicUser);
-            
-            try {
-              await supabase.from('profiles').upsert({
-                id: currentSession.user.id,
-                name: basicUser.name,
-                email: basicUser.email,
-                role: basicUser.role
-              });
-              
-              toast.success('Profile updated');
-              
-              if (event === 'SIGNED_IN' && window.location.pathname === '/login') {
-                window.location.href = '/';
-              }
-            } catch (err) {
-              console.error('Error updating profile:', err);
-            }
+          if (success && event === 'SIGNED_IN' && window.location.pathname === '/login') {
+            window.location.href = '/';
           }
         } else {
           setUser(null);
@@ -96,51 +107,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
         
         setIsLoading(false);
+        setAuthInitialized(true);
       }
     );
 
     const initializeAuth = async () => {
       try {
         setIsLoading(true);
+        console.log('Initializing auth...');
+        
         const { data: { session: initialSession } } = await supabase.auth.getSession();
         
         if (initialSession?.user) {
+          console.log('Found initial session:', initialSession.user.id);
           setSession(initialSession);
           setSupabaseUser(initialSession.user);
           
-          const appUser = await fetchUserProfile(initialSession.user.id);
-          if (appUser) {
-            setUser(appUser);
-          } else if (!profileLoadAttempted) {
-            setProfileLoadAttempted(true);
-            
-            const basicUser: AppUser = {
-              id: initialSession.user.id,
-              name: initialSession.user.user_metadata.name || initialSession.user.email?.split('@')[0] || 'User',
-              email: initialSession.user.email || '',
-              role: 'branch_user'
-            };
-            
-            setUser(basicUser);
-            
-            try {
-              await supabase.from('profiles').upsert({
-                id: initialSession.user.id,
-                name: basicUser.name,
-                email: basicUser.email,
-                role: basicUser.role
-              });
-              
-              console.log('Profile created/updated for user:', initialSession.user.id);
-            } catch (err) {
-              console.error('Error updating profile:', err);
-            }
-          }
+          await ensureUserProfile(initialSession.user);
         }
       } catch (error) {
         console.error('Error initializing auth:', error);
       } finally {
         setIsLoading(false);
+        setAuthInitialized(true);
       }
     };
 
@@ -149,7 +138,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       subscription.unsubscribe();
     };
-  }, [setUser, setSupabaseUser, setSession, setIsLoading, profileLoadAttempted, setProfileLoadAttempted]);
+  }, [setUser, setSupabaseUser, setSession, setIsLoading, setAuthInitialized]);
 
   const login = async (email: string, password: string) => {
     setIsLoading(true);

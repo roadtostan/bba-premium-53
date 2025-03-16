@@ -9,6 +9,7 @@ export function useAuthState() {
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [authInitialized, setAuthInitialized] = useState<boolean>(false);
   
   // Add a safety timeout to prevent infinite loading state
   useEffect(() => {
@@ -33,6 +34,8 @@ export function useAuthState() {
     isLoading,
     setIsLoading,
     error,
-    setError
+    setError,
+    authInitialized,
+    setAuthInitialized
   };
 }
