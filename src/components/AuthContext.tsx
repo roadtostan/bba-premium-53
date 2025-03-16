@@ -37,8 +37,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setError(null);
       setIsLoading(true);
       const userData = await signInWithEmail(email, password);
-      setUser(userData);
-      toast.success("Logged in successfully");
+      setUser(userData as User);
+      toast.success("Berhasil masuk");
     } catch (err) {
       setError("Login gagal. Periksa email dan password Anda.");
       console.error("Login error:", err);
@@ -52,7 +52,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       await signOut();
       setUser(null);
-      toast.info("Logged out successfully");
+      toast.info("Berhasil keluar");
     } catch (err) {
       console.error("Logout error:", err);
     }

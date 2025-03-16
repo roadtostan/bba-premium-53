@@ -29,24 +29,24 @@ export default function Login() {
     try {
       await login(email, password);
     } catch (err) {
-      console.error("Login error:", err);
+      console.error("Kesalahan login:", err);
     }
   };
 
   // Demo logins dengan password yang sesuai di Supabase
   const demoLogins = [
     {
-      role: "Branch User",
+      role: "User Cabang",
       email: "branch1@bolabolaayam.com",
       password: "branch1",
     },
     {
-      role: "Sub-District Admin",
+      role: "Admin Wilayah",
       email: "subdistrict@bolabolaayam.com",
       password: "subdistrict",
     },
     {
-      role: "City Admin",
+      role: "Admin Kota",
       email: "city@bolabolaayam.com",
       password: "city",
     },
@@ -60,17 +60,19 @@ export default function Login() {
   return (
     <div className="min-h-screen flex flex-col justify-center py-12 sm:px-6 lg:px-8 animate-fadeIn">
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
-        <h1 className="text-3xl font-extrabold text-primary">Bola Bola Ayam</h1>
         <h2 className="mt-2 text-2xl font-bold text-gray-900 dark:text-gray-100">
-          Sales Report Management
+          Laporan Penjualan
         </h2>
+        <h1 className="text-3xl font-extrabold text-primary">
+          Bola Bola Ayam Premium
+        </h1>
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="glass-panel py-8 px-4 shadow sm:rounded-lg sm:px-10 border">
           <form className="space-y-6" onSubmit={handleSubmit}>
             <div>
-              <Label htmlFor="email">Email address</Label>
+              <Label htmlFor="email">Alamat Email</Label>
               <div className="mt-1">
                 <Input
                   id="email"
@@ -84,12 +86,12 @@ export default function Login() {
                 />
               </div>
               {loginAttempted && !email && (
-                <p className="mt-1 text-sm text-red-600">Email is required</p>
+                <p className="mt-1 text-sm text-red-600">Email wajib diisi</p>
               )}
             </div>
 
             <div>
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">Kata Sandi</Label>
               <div className="mt-1">
                 <Input
                   id="password"
@@ -106,7 +108,7 @@ export default function Login() {
               </div>
               {loginAttempted && !password && (
                 <p className="mt-1 text-sm text-red-600">
-                  Password is required
+                  Kata sandi wajib diisi
                 </p>
               )}
             </div>
@@ -119,11 +121,11 @@ export default function Login() {
               >
                 {isLoading ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Logging
-                    in...
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Sedang
+                    masuk...
                   </>
                 ) : (
-                  "Sign in"
+                  "Masuk"
                 )}
               </Button>
             </div>
@@ -140,7 +142,7 @@ export default function Login() {
               </div>
               <div className="relative flex justify-center text-sm">
                 <span className="px-2 bg-white dark:bg-black text-gray-500 dark:text-gray-400">
-                  Demo Accounts
+                  Akun Demo
                 </span>
               </div>
             </div>
@@ -156,7 +158,7 @@ export default function Login() {
                     setDemoLogin(demoLogin.email, demoLogin.password)
                   }
                 >
-                  Login as {demoLogin.role}
+                  Masuk sebagai {demoLogin.role}
                 </Button>
               ))}
             </div>

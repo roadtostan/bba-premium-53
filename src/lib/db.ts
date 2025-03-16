@@ -10,26 +10,36 @@ export async function getUsers(filters?: {
   subdistrict?: string;
   city?: string;
 }) {
-  let query = supabase.from("users").select("*").order("name");
+  try {
+    let query = supabase.from("users").select("*").order("name");
 
-  if (filters) {
-    if (filters.role) {
-      query = query.eq("role", filters.role);
+    if (filters) {
+      if (filters.role) {
+        query = query.eq("role", filters.role);
+      }
+      if (filters.branch) {
+        query = query.eq("branch", filters.branch);
+      }
+      if (filters.subdistrict) {
+        query = query.eq("subdistrict", filters.subdistrict);
+      }
+      if (filters.city) {
+        query = query.eq("city", filters.city);
+      }
     }
-    if (filters.branch) {
-      query = query.eq("branch", filters.branch);
+
+    const { data: users, error } = await query;
+    if (error) {
+      if (error.code === "PGRST116") {
+        throw new Error("Anda tidak memiliki izin untuk melihat data pengguna");
+      }
+      throw error;
     }
-    if (filters.subdistrict) {
-      query = query.eq("subdistrict", filters.subdistrict);
-    }
-    if (filters.city) {
-      query = query.eq("city", filters.city);
-    }
+    return users;
+  } catch (error) {
+    console.error("Error fetching users:", error);
+    throw error;
   }
-
-  const { data: users, error } = await query;
-  if (error) throw error;
-  return users;
 }
 
 // Fungsi untuk mendapatkan user by ID
@@ -42,6 +52,58 @@ export async function getUserById(userId: string) {
 
   if (error) throw error;
   return user;
+}
+
+// Fungsi untuk update user
+export async function updateUser(
+  userId: string,
+  userData: {
+    name: string;
+    role: string;
+    branch?: string;
+    subdistrict?: string;
+    city?: string;
+  }
+) {
+  try {
+    const { data, error } = await supabase
+      .from("users")
+      .update(userData)
+      .eq("id", userId)
+      .select()
+      .single();
+
+    if (error) {
+      if (error.code === "PGRST116") {
+        throw new Error(
+          "Anda tidak memiliki izin untuk mengubah data pengguna ini"
+        );
+      }
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    console.error("Error updating user:", error);
+    throw error;
+  }
+}
+
+// Fungsi untuk delete user
+export async function deleteUser(userId: string) {
+  try {
+    const { error } = await supabase.from("users").delete().eq("id", userId);
+
+    if (error) {
+      if (error.code === "PGRST116") {
+        throw new Error("Anda tidak memiliki izin untuk menghapus pengguna");
+      }
+      throw error;
+    }
+  } catch (error) {
+    console.error("Error deleting user:", error);
+    throw error;
+  }
 }
 
 // Fungsi untuk mendapatkan data cities
@@ -352,26 +414,41 @@ export async function findUserByEmail(email: string) {
 }
 
 export async function signInWithEmail(email: string, password: string) {
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
+  try {
+    // Coba sign in dulu
+    const { data: authData, error: authError } =
+      await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-  if (error) throw error;
+    if (authError) throw authError;
 
-  // Setelah sign in berhasil, ambil data user dari tabel users
-  if (data.user) {
-    const { data: userData, error: userError } = await supabase
-      .from("users")
-      .select("*")
-      .eq("email", email)
-      .single();
+    // Setelah sign in berhasil, ambil data user dari tabel users menggunakan RPC
+    if (authData.user) {
+      const { data: userData, error: userError } = await supabase
+        .rpc("get_user_data", { user_email: email })
+        .single();
 
-    if (userError) throw userError;
-    return userData;
+      if (userError) {
+        await supabase.auth.signOut();
+        console.error("User data error:", userError);
+        throw new Error("Gagal mengambil data pengguna. Silakan coba lagi.");
+      }
+
+      if (!userData) {
+        await supabase.auth.signOut();
+        throw new Error("Data pengguna tidak ditemukan.");
+      }
+
+      return userData;
+    }
+
+    return null;
+  } catch (error) {
+    console.error("Login error:", error);
+    throw error;
   }
-
-  return null;
 }
 
 export async function signOut() {

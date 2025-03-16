@@ -1,6 +1,8 @@
 export {
   getUsers,
   getUserById,
+  updateUser,
+  deleteUser,
   getCities,
   getSubdistricts,
   getBranches,
