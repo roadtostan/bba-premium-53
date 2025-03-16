@@ -1,15 +1,15 @@
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/components/AuthContext';
 import NavBar from '@/components/NavBar';
-import { reports } from '@/lib/data';
+import { getReportById } from '@/lib/data';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
-import { ReportStatus } from '@/types';
+import { Report, ReportStatus } from '@/types';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ArrowLeft, Clock, CheckCheck, X, MessageSquare, Send, FileEdit } from 'lucide-react';
@@ -19,12 +19,19 @@ export default function ReportDetail() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
   const navigate = useNavigate();
-  
-  const [report, setReport] = useState(() => {
-    const foundReport = reports.find(r => r.id === id);
-    if (!foundReport) return null;
-    return foundReport;
-  });
+  const [report, setReport] = useState<Report | null>(null);
+
+  useEffect(() => {
+    async function loadReport() {
+      try {
+        const reportData = await getReportById(id as string);
+        setReport(reportData);
+      } catch (error) {
+        toast.error('Failed to load report');
+      }
+    }
+    loadReport();
+  }, [id]);
   
   const [comment, setComment] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);

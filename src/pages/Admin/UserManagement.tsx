@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { User, UserRole } from '@/types';
-import { users } from '@/lib/data';
+import { getUsers } from '@/lib/data';
 import { Layout } from '@/components/Layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -33,12 +33,24 @@ import { User as UserIcon, Pencil, Trash } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function UserManagement() {
-  const [usersList, setUsersList] = useState<User[]>(users);
+  const [usersList, setUsersList] = useState<User[]>([]);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const [showAddEditDialog, setShowAddEditDialog] = useState(false);
 
+  useEffect(() => {
+    async function loadUsers() {
+      try {
+        const users = await getUsers();
+        setUsersList(users);
+      } catch (error) {
+        toast.error('Failed to load users');
+      }
+    }
+    loadUsers();
+  }, []);
+  
   const [formData, setFormData] = useState<{
     id: string;
     name: string;
