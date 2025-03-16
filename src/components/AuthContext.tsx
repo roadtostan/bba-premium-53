@@ -10,7 +10,6 @@ import {
   signUpWithEmailPassword,
   logoutUser
 } from '@/services/authService';
-import { createDemoAccount } from '@/services/demoService';
 
 interface AuthContextType {
   user: AppUser | null;
@@ -21,7 +20,6 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, name: string) => Promise<void>;
   logout: () => Promise<void>;
-  createDemoAccount: (role: 'branch_user' | 'subdistrict_admin' | 'city_admin') => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -41,45 +39,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   } = useAuthState();
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, currentSession) => {
-        console.log("Auth state changed:", event, currentSession);
-        
-        setSession(currentSession);
-        setSupabaseUser(currentSession?.user ?? null);
-        
-        if (currentSession?.user) {
-          try {
-            const profile = await fetchUserProfile(currentSession.user.id);
-            
-            if (profile) {
-              console.log('Setting user profile:', profile);
-              setUser(profile);
-            } else {
-              console.error('No profile found for user:', currentSession.user.id);
-              setUser(null);
-            }
-            
-            if (event === 'SIGNED_IN' && window.location.pathname === '/login') {
-              window.location.href = '/';
-            }
-          } catch (error) {
-            console.error('Error setting up user after auth state change:', error);
-            setUser(null);
-          }
-        } else {
-          setUser(null);
-        }
-        
-        setIsLoading(false);
-      }
-    );
-
     const initializeAuth = async () => {
       try {
         setIsLoading(true);
         console.log('Initializing auth...');
         
+        // Get initial session
         const { data: { session: initialSession } } = await supabase.auth.getSession();
         
         if (initialSession?.user) {
@@ -87,6 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setSession(initialSession);
           setSupabaseUser(initialSession.user);
           
+          // Fetch user profile
           const profile = await fetchUserProfile(initialSession.user.id);
           if (profile) {
             console.log('Setting initial user profile:', profile);
@@ -103,12 +69,56 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     };
 
+    // Setup auth state change listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, currentSession) => {
+        console.log("Auth state changed:", event, currentSession);
+        
+        setSession(currentSession);
+        setSupabaseUser(currentSession?.user ?? null);
+        
+        if (currentSession?.user) {
+          try {
+            // Clear any previous errors
+            setError(null);
+            
+            // Fetch profile on auth state change
+            const profile = await fetchUserProfile(currentSession.user.id);
+            
+            if (profile) {
+              console.log('Setting user profile:', profile);
+              setUser(profile);
+            } else {
+              console.error('No profile found for user:', currentSession.user.id);
+              setUser(null);
+              setError('Error fetching user profile');
+            }
+            
+            // Redirect to dashboard on successful sign-in
+            if (event === 'SIGNED_IN' && window.location.pathname === '/login') {
+              window.location.href = '/';
+            }
+          } catch (error) {
+            console.error('Error setting up user after auth state change:', error);
+            setUser(null);
+          } finally {
+            setIsLoading(false);
+          }
+        } else {
+          setUser(null);
+          setIsLoading(false);
+        }
+      }
+    );
+
+    // Run initialization
     initializeAuth();
 
+    // Cleanup subscription on unmount
     return () => {
       subscription.unsubscribe();
     };
-  }, [setUser, setSupabaseUser, setSession, setIsLoading]);
+  }, [setUser, setSupabaseUser, setSession, setIsLoading, setError]);
 
   const login = async (email: string, password: string) => {
     setIsLoading(true);
@@ -118,7 +128,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { error } = await loginWithEmailPassword(email, password);
       if (error) setError(error);
     } finally {
-      setIsLoading(false);
+      // Login state will be updated by onAuthStateChange
     }
   };
 
@@ -135,19 +145,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = async () => {
-    await logoutUser();
-  };
-  
-  const handleCreateDemoAccount = async (role: 'branch_user' | 'subdistrict_admin' | 'city_admin') => {
     setIsLoading(true);
-    setError(null);
-    
-    try {
-      const { error } = await createDemoAccount(role);
-      if (error) setError(error);
-    } finally {
-      setIsLoading(false);
-    }
+    await logoutUser();
+    setIsLoading(false);
   };
 
   return (
@@ -160,8 +160,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         error, 
         login, 
         signUp, 
-        logout,
-        createDemoAccount: handleCreateDemoAccount
+        logout
       }}
     >
       {children}

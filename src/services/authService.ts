@@ -7,6 +7,7 @@ export async function fetchUserProfile(userId: string): Promise<AppUser | null> 
   try {
     console.log('Fetching profile for user:', userId);
     
+    // Direct query from profiles table
     const { data: profileData, error: profileError } = await supabase
       .from('profiles')
       .select('*')
