@@ -445,6 +445,22 @@ export type Database = {
           updated_at: string
         }[]
       }
+      get_user_profile_by_id: {
+        Args: {
+          user_id: string
+        }
+        Returns: {
+          branch: string | null
+          city: string | null
+          created_at: string
+          email: string | null
+          id: string
+          name: string | null
+          role: string
+          subdistrict: string | null
+          updated_at: string
+        }[]
+      }
       is_branch_manager: {
         Args: {
           branch_id: string
