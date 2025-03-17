@@ -11,31 +11,30 @@ export async function getUsers(filters?: {
   city?: string;
 }) {
   try {
-    let query = supabase.from("users").select("*").order("name");
+    // Gunakan RPC untuk menghindari infinite recursion
+    const { data: users, error } = await supabase.rpc("get_users_data");
 
-    if (filters) {
-      if (filters.role) {
-        query = query.eq("role", filters.role);
-      }
-      if (filters.branch) {
-        query = query.eq("branch", filters.branch);
-      }
-      if (filters.subdistrict) {
-        query = query.eq("subdistrict", filters.subdistrict);
-      }
-      if (filters.city) {
-        query = query.eq("city", filters.city);
-      }
-    }
-
-    const { data: users, error } = await query;
     if (error) {
       if (error.code === "PGRST116") {
         throw new Error("Anda tidak memiliki izin untuk melihat data pengguna");
       }
       throw error;
     }
-    return users;
+
+    // Terapkan filter di sisi client jika ada
+    let filteredUsers = users;
+    if (filters) {
+      filteredUsers = users.filter((user) => {
+        if (filters.role && user.role !== filters.role) return false;
+        if (filters.branch && user.branch !== filters.branch) return false;
+        if (filters.subdistrict && user.subdistrict !== filters.subdistrict)
+          return false;
+        if (filters.city && user.city !== filters.city) return false;
+        return true;
+      });
+    }
+
+    return filteredUsers;
   } catch (error) {
     console.error("Error fetching users:", error);
     throw error;
@@ -457,22 +456,31 @@ export async function signOut() {
 }
 
 export async function getCurrentUser() {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
+  try {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
 
-  if (session?.user) {
-    const { data: userData, error } = await supabase
-      .from("users")
-      .select("*")
-      .eq("email", session.user.email)
-      .single();
+    if (session?.user) {
+      // Gunakan RPC untuk menghindari infinite recursion
+      const { data: userData, error } = await supabase
+        .rpc("get_user_data", { user_email: session.user.email })
+        .single();
 
-    if (error) throw error;
-    return userData;
+      if (error) {
+        console.error("Error getting user data:", error);
+        await supabase.auth.signOut();
+        throw error;
+      }
+
+      return userData;
+    }
+
+    return null;
+  } catch (error) {
+    console.error("Get current user error:", error);
+    throw error;
   }
-
-  return null;
 }
 
 // Fungsi untuk menambah city baru

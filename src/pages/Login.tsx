@@ -10,16 +10,7 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loginAttempted, setLoginAttempted] = useState(false);
-  
-  // Signup form state
-  const [signupEmail, setSignupEmail] = useState('');
-  const [signupPassword, setSignupPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [name, setName] = useState('');
-  const [signupAttempted, setSignupAttempted] = useState(false);
-  
-  // Authentication context
-  const { user, login, signUp, isLoading, error } = useAuth();
+  const { user, login, isLoading, error } = useAuth();
   const navigate = useNavigate();
 
   // If user is already logged in, redirect to dashboard
@@ -29,7 +20,7 @@ export default function Login() {
     }
   }, [user, navigate]);
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginAttempted(true);
 
@@ -97,26 +88,8 @@ export default function Login() {
               {loginAttempted && !email && (
                 <p className="mt-1 text-sm text-red-600">Email wajib diisi</p>
               )}
-              
-              <form className="space-y-6" onSubmit={handleLogin}>
-                <div>
-                  <Label htmlFor="email">Email address</Label>
-                  <div className="mt-1">
-                    <Input
-                      id="email"
-                      name="email"
-                      type="email"
-                      autoComplete="email"
-                      required
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className={loginAttempted && !email ? 'border-red-500' : ''}
-                    />
-                  </div>
-                  {loginAttempted && !email && (
-                    <p className="mt-1 text-sm text-red-600">Email is required</p>
-                  )}
-                </div>
+            </div>
+
             <div>
               <Label htmlFor="password">Kata Sandi</Label>
               <div className="mt-1">
