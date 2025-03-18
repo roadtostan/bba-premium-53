@@ -1,4 +1,5 @@
-import { useState } from "react";
+
+import { UserRole, ReportStatus } from "./types";
 
 export type UserRole =
   | "super_admin"
@@ -88,19 +89,3 @@ export interface IncomeInfo {
   remaining_income: number;
   total_income: number;
 }
-
-// Tambahkan state untuk menyimpan data dropdown
-const [cities, setCities] = useState<Array<{ id: string; name: string }>>([]);
-const [subdistricts, setSubdistricts] = useState<
-  Array<{ id: string; name: string; city_id: string }>
->([]);
-const [branches, setBranches] = useState<
-  Array<{ id: string; name: string; subdistrict_id: string }>
->([]);
-
-// Tambahkan state untuk menyimpan ID yang dipilih
-const [selectedIds, setSelectedIds] = useState({
-  city_id: "",
-  subdistrict_id: "",
-  branch_id: "",
-});
