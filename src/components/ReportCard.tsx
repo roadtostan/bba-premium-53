@@ -91,10 +91,10 @@ export default function ReportCard({
     user &&
     ((user.role === "subdistrict_admin" &&
       report.status === "pending_subdistrict" &&
-      report.subdistrict_name === user.subdistrict) ||
+      report.subdistrictName === user.subdistrict) ||
       (user.role === "city_admin" &&
         report.status === "pending_city" &&
-        report.city_name === user.city));
+        report.cityName === user.city));
 
   // Allow edit only for branch_user and super_admin roles
   const isEditable = user && 
@@ -115,7 +115,7 @@ export default function ReportCard({
           <div className="space-y-1">
             <CardTitle className="text-lg">{report.title}</CardTitle>
             <CardDescription>
-              {report.branch_name} •{" "}
+              {report.branchName} •{" "}
               {format(new Date(report.date), "MMM dd, yyyy")}
             </CardDescription>
           </div>
@@ -142,7 +142,7 @@ export default function ReportCard({
         )}
         <div className="mt-2">
           <p className="text-sm font-semibold">
-            Total Penjualan: Rp{report.total_sales?.toLocaleString() ?? 0}
+            Total Penjualan: Rp{report.totalSales?.toLocaleString() ?? 0}
           </p>
         </div>
       </CardContent>

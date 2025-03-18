@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/components/AuthContext";
@@ -132,10 +133,10 @@ export default function ReportDetail() {
     user &&
     ((user.role === "subdistrict_admin" &&
       report.status === "pending_subdistrict" &&
-      report.subdistrict_name === user.subdistrict) ||
+      report.subdistrictName === user.subdistrict) ||
       (user.role === "city_admin" &&
         report.status === "pending_city" &&
-        report.city_name === user.city));
+        report.cityName === user.city));
 
   const isEditable = user && canEditReport(user.id, report.id);
 
@@ -245,7 +246,7 @@ export default function ReportDetail() {
             </div>
 
             <div className="mt-2 text-muted-foreground flex flex-wrap gap-x-4 gap-y-1">
-              <span>Cabang: {report.branch_name}</span>
+              <span>Cabang: {report.branchName}</span>
               <span>•</span>
               <span>Tanggal: {format(new Date(report.date), "PPP", { locale: idLocale })}</span>
               <span>•</span>
@@ -257,7 +258,7 @@ export default function ReportDetail() {
             <CardHeader>
               <CardTitle>Detail Laporan</CardTitle>
               <CardDescription>
-                Informasi penjualan untuk {report.branch_name}
+                Informasi penjualan untuk {report.branchName}
               </CardDescription>
             </CardHeader>
 
@@ -274,7 +275,7 @@ export default function ReportDetail() {
                   Total Penjualan
                 </h3>
                 <p className="text-xl font-bold">
-                  Rp{report.total_sales.toLocaleString()}
+                  Rp{report.totalSales.toLocaleString()}
                 </p>
               </div>
 
