@@ -13,6 +13,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FilePlus, FileCheck, FileX, Clock } from "lucide-react";
 import { Report } from "@/types";
 import { toast } from "sonner";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -21,6 +23,7 @@ export default function Dashboard() {
   const [pendingActionReports, setPendingActionReports] = useState<Report[]>(
     []
   );
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     async function loadData() {
@@ -157,7 +160,6 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* Laporan yang membutuhkan tindakan (untuk admin) */}
         {(user.role === "subdistrict_admin" || user.role === "city_admin") &&
           pendingActionReports.length > 0 && (
             <div className="mb-8">
@@ -178,7 +180,6 @@ export default function Dashboard() {
             </div>
           )}
 
-        {/* Pesan tidak bisa membuat laporan baru */}
         {user.role === "branch_user" && !canCreate && (
           <div className="mb-8 p-4 border rounded-lg bg-yellow-50 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200">
             <p className="text-sm">
@@ -188,7 +189,6 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Semua Laporan */}
         <div>
           <Tabs
             defaultValue="all"
@@ -196,41 +196,43 @@ export default function Dashboard() {
             onValueChange={setActiveTab}
             className="w-full"
           >
-            <div className="border-b mb-4">
-              <TabsList className="w-full justify-start">
-                <TabsTrigger
-                  value="all"
-                  className="data-[state=active]:border-b-2 data-[state=active]:border-primary"
-                >
-                  Semua Laporan
-                </TabsTrigger>
-                {user.role === "branch_user" && (
+            <div className="border-b mb-4 w-full">
+              <ScrollArea className="w-full pb-2" orientation="horizontal">
+                <TabsList className="inline-flex w-max justify-start">
                   <TabsTrigger
-                    value="draft"
-                    className="data-[state=active]:border-b-2 data-[state=active]:border-primary"
+                    value="all"
+                    className="data-[state=active]:border-b-2 data-[state=active]:border-primary whitespace-nowrap"
                   >
-                    Draf
+                    Semua Laporan
                   </TabsTrigger>
-                )}
-                <TabsTrigger
-                  value="pending"
-                  className="data-[state=active]:border-b-2 data-[state=active]:border-primary"
-                >
-                  Menunggu
-                </TabsTrigger>
-                <TabsTrigger
-                  value="approved"
-                  className="data-[state=active]:border-b-2 data-[state=active]:border-primary"
-                >
-                  Disetujui
-                </TabsTrigger>
-                <TabsTrigger
-                  value="rejected"
-                  className="data-[state=active]:border-b-2 data-[state=active]:border-primary"
-                >
-                  Ditolak
-                </TabsTrigger>
-              </TabsList>
+                  {user.role === "branch_user" && (
+                    <TabsTrigger
+                      value="draft"
+                      className="data-[state=active]:border-b-2 data-[state=active]:border-primary whitespace-nowrap"
+                    >
+                      Draf
+                    </TabsTrigger>
+                  )}
+                  <TabsTrigger
+                    value="pending"
+                    className="data-[state=active]:border-b-2 data-[state=active]:border-primary whitespace-nowrap"
+                  >
+                    Menunggu
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="approved"
+                    className="data-[state=active]:border-b-2 data-[state=active]:border-primary whitespace-nowrap"
+                  >
+                    Disetujui
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="rejected"
+                    className="data-[state=active]:border-b-2 data-[state=active]:border-primary whitespace-nowrap"
+                  >
+                    Ditolak
+                  </TabsTrigger>
+                </TabsList>
+              </ScrollArea>
             </div>
 
             <TabsContent value="all" className="mt-0">
@@ -254,7 +256,6 @@ export default function Dashboard() {
               )}
             </TabsContent>
 
-            {/* Struktur yang sama untuk tab lainnya */}
             {["draft", "pending", "approved", "rejected"].map((tab) => (
               <TabsContent key={tab} value={tab} className="mt-0">
                 {filteredReports().length === 0 ? (
