@@ -10,26 +10,35 @@ export async function getUsers(filters?: {
   subdistrict?: string;
   city?: string;
 }) {
-  let query = supabase.from("users").select("*").order("name");
+  try {
+    // Gunakan RPC untuk menghindari infinite recursion
+    const { data: users, error } = await supabase.rpc("get_users_data");
 
-  if (filters) {
-    if (filters.role) {
-      query = query.eq("role", filters.role);
+    if (error) {
+      if (error.code === "PGRST116") {
+        throw new Error("Anda tidak memiliki izin untuk melihat data pengguna");
+      }
+      throw error;
     }
-    if (filters.branch) {
-      query = query.eq("branch", filters.branch);
+
+    // Terapkan filter di sisi client jika ada
+    let filteredUsers = users;
+    if (filters) {
+      filteredUsers = users.filter((user) => {
+        if (filters.role && user.role !== filters.role) return false;
+        if (filters.branch && user.branch !== filters.branch) return false;
+        if (filters.subdistrict && user.subdistrict !== filters.subdistrict)
+          return false;
+        if (filters.city && user.city !== filters.city) return false;
+        return true;
+      });
     }
-    if (filters.subdistrict) {
-      query = query.eq("subdistrict", filters.subdistrict);
-    }
-    if (filters.city) {
-      query = query.eq("city", filters.city);
-    }
+
+    return filteredUsers;
+  } catch (error) {
+    console.error("Error fetching users:", error);
+    throw error;
   }
-
-  const { data: users, error } = await query;
-  if (error) throw error;
-  return users;
 }
 
 // Fungsi untuk mendapatkan user by ID
@@ -42,6 +51,71 @@ export async function getUserById(userId: string) {
 
   if (error) throw error;
   return user;
+}
+
+// Fungsi untuk update user
+export async function updateUser(
+  userId: string,
+  userData: {
+    name: string;
+    role: string;
+    branch?: string;
+    subdistrict?: string;
+    city?: string;
+  }
+) {
+  try {
+    // Validasi role
+    const validRoles = [
+      "super_admin",
+      "city_admin",
+      "subdistrict_admin",
+      "branch_user",
+    ];
+    if (!validRoles.includes(userData.role)) {
+      throw new Error("Role tidak valid");
+    }
+
+    const { data, error } = await supabase.rpc("update_user_data", {
+      p_user_id: userId,
+      p_name: userData.name,
+      p_role: userData.role,
+      p_branch: userData.branch,
+      p_subdistrict: userData.subdistrict,
+      p_city: userData.city,
+    });
+
+    if (error) {
+      if (error.code === "PGRST116") {
+        throw new Error(
+          "Anda tidak memiliki izin untuk mengubah data pengguna ini"
+        );
+      }
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    console.error("Error updating user:", error);
+    throw error;
+  }
+}
+
+// Fungsi untuk delete user
+export async function deleteUser(userId: string) {
+  try {
+    const { error } = await supabase.from("users").delete().eq("id", userId);
+
+    if (error) {
+      if (error.code === "PGRST116") {
+        throw new Error("Anda tidak memiliki izin untuk menghapus pengguna");
+      }
+      throw error;
+    }
+  } catch (error) {
+    console.error("Error deleting user:", error);
+    throw error;
+  }
 }
 
 // Fungsi untuk mendapatkan data cities
@@ -157,52 +231,43 @@ export async function getReports(filters?: {
 
 // Fungsi untuk mendapatkan single report by ID
 export async function getReportById(reportId: string) {
-  const { data: report, error } = await supabase
-    .from("reports")
-    .select(
-      `
-      *,
-      comments (
-        id,
-        text,
-        user_id,
-        user_name,
-        created_at
-      )
-    `
-    )
-    .eq("id", reportId)
-    .single();
+  try {
+    const { data: report, error } = await supabase.rpc("get_report_detail", {
+      p_report_id: reportId,
+    });
 
-  if (error) throw error;
-  return report;
+    if (error) {
+      console.error("Error fetching report detail:", error);
+      throw error;
+    }
+
+    if (!report) {
+      throw new Error("Report not found");
+    }
+
+    return report;
+  } catch (error) {
+    console.error("Error in getReportById:", error);
+    throw error;
+  }
 }
 
 export async function getReportsByUser(userId: string) {
-  const { data: user } = await supabase
-    .from("users")
-    .select("*")
-    .eq("id", userId)
-    .single();
+  try {
+    const { data: reports, error } = await supabase.rpc("get_user_reports", {
+      p_user_id: userId,
+    });
 
-  if (!user) return [];
+    if (error) {
+      console.error("Error fetching reports:", error);
+      throw error;
+    }
 
-  let query = supabase.from("reports").select("*");
-
-  switch (user.role) {
-    case "branch_user":
-      query = query.eq("created_by", userId);
-      break;
-    case "subdistrict_admin":
-      query = query.eq("subdistrict_name", user.subdistrict);
-      break;
-    case "city_admin":
-      query = query.eq("city_name", user.city);
-      break;
+    return reports || [];
+  } catch (error) {
+    console.error("Error in getReportsByUser:", error);
+    throw error;
   }
-
-  const { data: reports } = await query;
-  return reports || [];
 }
 
 export const getReportsByStatus = async (
@@ -212,59 +277,66 @@ export const getReportsByStatus = async (
   return (await getReportsByUser(userId)).filter((r) => r.status === status);
 };
 
-// Update fungsi canCreateNewReport untuk menggunakan Supabase
+// Update fungsi canCreateNewReport untuk menggunakan RPC
 export async function canCreateNewReport(userId: string): Promise<boolean> {
-  const { data: user } = await supabase
-    .from("users")
-    .select("role")
-    .eq("id", userId)
-    .single();
+  try {
+    const { data, error } = await supabase.rpc("can_create_new_report", {
+      p_user_id: userId,
+    });
 
-  if (!user || user.role !== "branch_user") return false;
+    if (error) {
+      console.error("Error checking create permission:", error);
+      return false;
+    }
 
-  // Check pending reports
-  const { data: pendingReports, error } = await supabase
-    .from("reports")
-    .select("id")
-    .eq("created_by", userId)
-    .in("status", ["pending_subdistrict", "pending_city"]);
-
-  if (error) throw error;
-  return pendingReports.length === 0;
+    return data || false;
+  } catch (error) {
+    console.error("Error in canCreateNewReport:", error);
+    return false;
+  }
 }
 
-// Update fungsi canEditReport untuk menggunakan Supabase
+// Update fungsi canEditReport untuk menggunakan RPC
 export async function canEditReport(
   userId: string,
   reportId: string
 ): Promise<boolean> {
-  const [userResponse, reportResponse] = await Promise.all([
-    supabase.from("users").select("role").eq("id", userId).single(),
-    supabase
-      .from("reports")
-      .select("created_by, status")
-      .eq("id", reportId)
-      .single(),
-  ]);
+  try {
+    const { data, error } = await supabase.rpc("can_edit_report", {
+      p_user_id: userId,
+      p_report_id: reportId,
+    });
 
-  const user = userResponse.data;
-  const report = reportResponse.data;
+    if (error) {
+      console.error("Error checking edit permission:", error);
+      return false;
+    }
 
-  if (!user || !report) return false;
-  if (user.role !== "branch_user" || report.created_by !== userId) return false;
-
-  return report.status === "draft" || report.status === "rejected";
+    return data || false;
+  } catch (error) {
+    console.error("Error in canEditReport:", error);
+    return false;
+  }
 }
 
 export async function createReport(reportData: Partial<Report>) {
-  const { data, error } = await supabase
-    .from("reports")
-    .insert(reportData)
-    .select()
-    .single();
+  try {
+    const { data, error } = await supabase
+      .from("reports")
+      .insert({
+        ...reportData,
+        branch_manager: ((await getCurrentUser()) as { id: string })?.id,
+        status: reportData.status || "draft",
+      })
+      .select()
+      .single();
 
-  if (error) throw error;
-  return data;
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error("Error creating report:", error);
+    throw error;
+  }
 }
 
 export async function updateReport(
@@ -282,33 +354,26 @@ export async function updateReport(
   return data;
 }
 
-// Update fungsi getPendingActionReports untuk menggunakan Supabase
+// Update fungsi getPendingActionReports untuk menggunakan RPC
 export async function getPendingActionReports(userId: string) {
-  const { data: user } = await supabase
-    .from("users")
-    .select("role, subdistrict, city")
-    .eq("id", userId)
-    .single();
+  try {
+    const { data: reports, error } = await supabase.rpc(
+      "get_pending_action_reports",
+      {
+        p_user_id: userId,
+      }
+    );
 
-  if (!user) return [];
-
-  let query = supabase.from("reports").select("*");
-
-  switch (user.role) {
-    case "subdistrict_admin":
-      query = query
-        .eq("subdistrict_name", user.subdistrict)
-        .eq("status", "pending_subdistrict");
-      break;
-    case "city_admin":
-      query = query.eq("city_name", user.city).eq("status", "pending_city");
-      break;
-    default:
+    if (error) {
+      console.error("Error fetching pending reports:", error);
       return [];
-  }
+    }
 
-  const { data: reports } = await query;
-  return reports || [];
+    return reports || [];
+  } catch (error) {
+    console.error("Error in getPendingActionReports:", error);
+    return [];
+  }
 }
 
 // Fungsi untuk menambah komentar pada report
@@ -317,27 +382,41 @@ export async function addReportComment(
   userId: string,
   text: string
 ) {
-  const { data: user } = await supabase
-    .from("users")
-    .select("name")
-    .eq("id", userId)
-    .single();
+  try {
+    const { data: comment, error } = await supabase
+      .from("comments")
+      .insert({
+        report_id: reportId,
+        text,
+        user_id: userId,
+      })
+      .select(
+        `
+        id,
+        text,
+        user_id,
+        created_at,
+        users!comments_user_id_fkey (
+          name
+        )
+      `
+      )
+      .single();
 
-  if (!user) throw new Error("User not found");
+    if (error) throw error;
 
-  const { data: comment, error } = await supabase
-    .from("comments")
-    .insert({
-      report_id: reportId,
-      text,
-      user_id: userId,
-      user_name: user.name,
-    })
-    .select()
-    .single();
-
-  if (error) throw error;
-  return comment;
+    // Transform data structure to match expected format
+    return {
+      id: comment.id,
+      text: comment.text,
+      user_id: comment.user_id,
+      user_name: comment.users[0].name,
+      created_at: comment.created_at,
+    };
+  } catch (error) {
+    console.error("Error adding comment:", error);
+    throw error;
+  }
 }
 
 export async function findUserByEmail(email: string) {
@@ -352,26 +431,41 @@ export async function findUserByEmail(email: string) {
 }
 
 export async function signInWithEmail(email: string, password: string) {
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
+  try {
+    // Coba sign in dulu
+    const { data: authData, error: authError } =
+      await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-  if (error) throw error;
+    if (authError) throw authError;
 
-  // Setelah sign in berhasil, ambil data user dari tabel users
-  if (data.user) {
-    const { data: userData, error: userError } = await supabase
-      .from("users")
-      .select("*")
-      .eq("email", email)
-      .single();
+    // Setelah sign in berhasil, ambil data user dari tabel users menggunakan RPC
+    if (authData.user) {
+      const { data: userData, error: userError } = await supabase
+        .rpc("get_user_data", { user_email: email })
+        .single();
 
-    if (userError) throw userError;
-    return userData;
+      if (userError) {
+        await supabase.auth.signOut();
+        console.error("User data error:", userError);
+        throw new Error("Gagal mengambil data pengguna. Silakan coba lagi.");
+      }
+
+      if (!userData) {
+        await supabase.auth.signOut();
+        throw new Error("Data pengguna tidak ditemukan.");
+      }
+
+      return userData;
+    }
+
+    return null;
+  } catch (error) {
+    console.error("Login error:", error);
+    throw error;
   }
-
-  return null;
 }
 
 export async function signOut() {
@@ -380,22 +474,31 @@ export async function signOut() {
 }
 
 export async function getCurrentUser() {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
+  try {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
 
-  if (session?.user) {
-    const { data: userData, error } = await supabase
-      .from("users")
-      .select("*")
-      .eq("email", session.user.email)
-      .single();
+    if (session?.user) {
+      // Gunakan RPC untuk menghindari infinite recursion
+      const { data: userData, error } = await supabase
+        .rpc("get_user_data", { user_email: session.user.email })
+        .single();
 
-    if (error) throw error;
-    return userData;
+      if (error) {
+        console.error("Error getting user data:", error);
+        await supabase.auth.signOut();
+        throw error;
+      }
+
+      return userData;
+    }
+
+    return null;
+  } catch (error) {
+    console.error("Get current user error:", error);
+    throw error;
   }
-
-  return null;
 }
 
 // Fungsi untuk menambah city baru

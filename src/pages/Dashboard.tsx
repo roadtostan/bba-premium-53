@@ -106,7 +106,7 @@ export default function Dashboard() {
 
     if (reportIndex !== -1) {
       updatedReports[reportIndex].status = "rejected";
-      updatedReports[reportIndex].rejectionReason =
+      updatedReports[reportIndex].rejection_reason =
         reason || "No reason provided";
 
       setReports(updatedReports);
@@ -123,13 +123,13 @@ export default function Dashboard() {
   const getRoleDashboardTitle = () => {
     switch (user.role) {
       case "branch_user":
-        return `${user.branch} Reports`;
+        return `Laporan ${user.branch}`;
       case "subdistrict_admin":
-        return `${user.subdistrict} Reports`;
+        return `Laporan ${user.subdistrict}`;
       case "city_admin":
-        return `${user.city} Reports`;
+        return `Laporan ${user.city}`;
       default:
-        return "Dashboard";
+        return "Dasbor";
     }
   };
 
@@ -140,7 +140,9 @@ export default function Dashboard() {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
           <div>
             <h1 className="text-3xl font-bold">{getRoleDashboardTitle()}</h1>
-            <p className="text-muted-foreground">Welcome back, {user.name}</p>
+            <p className="text-muted-foreground">
+              Selamat datang kembali, {user.name}
+            </p>
           </div>
           {user.role === "branch_user" && (
             <Link to="/create-report">
@@ -149,19 +151,19 @@ export default function Dashboard() {
                 className="button-transition button-hover flex items-center gap-2"
               >
                 <FilePlus className="h-4 w-4" />
-                Create New Report
+                Buat Laporan Baru
               </Button>
             </Link>
           )}
         </div>
 
-        {/* Reports that need action (for admins) */}
+        {/* Laporan yang membutuhkan tindakan (untuk admin) */}
         {(user.role === "subdistrict_admin" || user.role === "city_admin") &&
           pendingActionReports.length > 0 && (
             <div className="mb-8">
               <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
                 <Clock className="h-5 w-5 text-status-pending" />
-                Reports Requiring Your Approval
+                Laporan Menunggu Persetujuan
               </h2>
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {pendingActionReports.map((report) => (
@@ -176,17 +178,17 @@ export default function Dashboard() {
             </div>
           )}
 
-        {/* Branch User: Can't create new report message */}
+        {/* Pesan tidak bisa membuat laporan baru */}
         {user.role === "branch_user" && !canCreate && (
           <div className="mb-8 p-4 border rounded-lg bg-yellow-50 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200">
             <p className="text-sm">
-              You have pending reports awaiting approval. You can create a new
-              report once all pending reports are processed.
+              Anda memiliki laporan yang menunggu persetujuan. Anda dapat
+              membuat laporan baru setelah semua laporan yang tertunda diproses.
             </p>
           </div>
         )}
 
-        {/* All Reports */}
+        {/* Semua Laporan */}
         <div>
           <Tabs
             defaultValue="all"
@@ -200,33 +202,33 @@ export default function Dashboard() {
                   value="all"
                   className="data-[state=active]:border-b-2 data-[state=active]:border-primary"
                 >
-                  All Reports
+                  Semua Laporan
                 </TabsTrigger>
                 {user.role === "branch_user" && (
                   <TabsTrigger
                     value="draft"
                     className="data-[state=active]:border-b-2 data-[state=active]:border-primary"
                   >
-                    Drafts
+                    Draf
                   </TabsTrigger>
                 )}
                 <TabsTrigger
                   value="pending"
                   className="data-[state=active]:border-b-2 data-[state=active]:border-primary"
                 >
-                  Pending
+                  Menunggu
                 </TabsTrigger>
                 <TabsTrigger
                   value="approved"
                   className="data-[state=active]:border-b-2 data-[state=active]:border-primary"
                 >
-                  Approved
+                  Disetujui
                 </TabsTrigger>
                 <TabsTrigger
                   value="rejected"
                   className="data-[state=active]:border-b-2 data-[state=active]:border-primary"
                 >
-                  Rejected
+                  Ditolak
                 </TabsTrigger>
               </TabsList>
             </div>
@@ -234,11 +236,11 @@ export default function Dashboard() {
             <TabsContent value="all" className="mt-0">
               {reports.length === 0 ? (
                 <div className="text-center py-12">
-                  <p className="text-muted-foreground">No reports found</p>
+                  <p className="text-muted-foreground">Tidak ada laporan</p>
                   {user.role === "branch_user" && canCreate && (
                     <Link to="/create-report">
                       <Button variant="outline" className="mt-4">
-                        Create Your First Report
+                        Buat Laporan Pertama
                       </Button>
                     </Link>
                   )}
@@ -252,13 +254,20 @@ export default function Dashboard() {
               )}
             </TabsContent>
 
-            {/* Repeat similar structure for other tabs */}
+            {/* Struktur yang sama untuk tab lainnya */}
             {["draft", "pending", "approved", "rejected"].map((tab) => (
               <TabsContent key={tab} value={tab} className="mt-0">
                 {filteredReports().length === 0 ? (
                   <div className="text-center py-12">
                     <p className="text-muted-foreground">
-                      No {tab} reports found
+                      Tidak ada laporan{" "}
+                      {tab === "draft"
+                        ? "draf"
+                        : tab === "pending"
+                        ? "menunggu"
+                        : tab === "approved"
+                        ? "disetujui"
+                        : "ditolak"}
                     </p>
                   </div>
                 ) : (

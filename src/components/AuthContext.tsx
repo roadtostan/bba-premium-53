@@ -19,17 +19,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    let mounted = true;
+
     async function loadUser() {
       try {
         const userData = await getCurrentUser();
-        setUser(userData);
+        if (mounted) {
+          setUser(userData as User);
+        }
       } catch (err) {
         console.error("Error loading user:", err);
+        if (mounted) {
+          // Jangan set user ke null jika terjadi error
+          // Ini mencegah redirect ke login saat refresh
+          setError("Gagal memuat data pengguna");
+        }
       } finally {
-        setIsLoading(false);
+        if (mounted) {
+          setIsLoading(false);
+        }
       }
     }
+
     loadUser();
+
+    // Cleanup function
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   const login = async (email: string, password: string) => {
@@ -37,8 +54,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setError(null);
       setIsLoading(true);
       const userData = await signInWithEmail(email, password);
-      setUser(userData);
-      toast.success("Logged in successfully");
+      setUser(userData as User);
+      toast.success("Berhasil masuk");
     } catch (err) {
       setError("Login gagal. Periksa email dan password Anda.");
       console.error("Login error:", err);
@@ -52,11 +69,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       await signOut();
       setUser(null);
-      toast.info("Logged out successfully");
+      toast.info("Berhasil keluar");
     } catch (err) {
       console.error("Logout error:", err);
+      toast.error("Gagal keluar dari sistem");
     }
   };
+
+  // Jika masih loading, tampilkan loading state
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
     <AuthContext.Provider value={{ user, login, logout, isLoading, error }}>

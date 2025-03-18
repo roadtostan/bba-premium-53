@@ -375,21 +375,10 @@ export default function LocationManagement() {
           }
           break;
         case "city":
-          // Check if this city is in use by any subdistricts
-          const cityInUse = subdistrictsList.some(
-            (subdistrict) => subdistrict.city_id === itemToDelete.id
-          );
-          if (cityInUse) {
-            toast.error(
-              "Cannot delete this city as it is associated with one or more subdistricts"
-            );
-            setShowDeleteDialog(false);
-            return;
+          const cityToDelete = citiesList.find((c) => c.id === itemToDelete.id);
+          if (cityToDelete) {
+            handleDeleteCity(cityToDelete);
           }
-          setCitiesList((prev) =>
-            prev.filter((city) => city.id !== itemToDelete.id)
-          );
-          toast.success("City deleted successfully");
           break;
       }
       setShowDeleteDialog(false);
@@ -398,13 +387,34 @@ export default function LocationManagement() {
     }
   };
 
+  const handleDeleteCity = async (city: City) => {
+    try {
+      // Check if this city is in use by any subdistricts
+      const cityInUse = subdistrictsList.some(
+        (subdistrict) => subdistrict.city_id === city.id
+      );
+      if (cityInUse) {
+        toast.error(
+          "Tidak dapat menghapus kota ini karena masih digunakan oleh satu atau lebih kecamatan"
+        );
+        return;
+      }
+
+      await deleteCity(city.id);
+      setCitiesList((prev) => prev.filter((c) => c.id !== city.id));
+      toast.success("Kota berhasil dihapus");
+    } catch (error) {
+      toast.error("Gagal menghapus kota");
+    }
+  };
+
   const handleDeleteBranch = async (branch: Branch) => {
     try {
       await deleteBranch(branch.id);
       setBranchesList((prev) => prev.filter((b) => b.id !== branch.id));
-      toast.success("Branch deleted successfully");
+      toast.success("Cabang berhasil dihapus");
     } catch (error) {
-      toast.error("Failed to delete branch");
+      toast.error("Gagal menghapus cabang");
     }
   };
 
@@ -416,7 +426,7 @@ export default function LocationManagement() {
       );
       if (subdistrictInUse) {
         toast.error(
-          "Cannot delete this subdistrict as it is being used by one or more branches"
+          "Tidak dapat menghapus kecamatan ini karena masih digunakan oleh satu atau lebih cabang"
         );
         return;
       }
@@ -425,9 +435,9 @@ export default function LocationManagement() {
       setSubdistrictsList((prev) =>
         prev.filter((s) => s.id !== subdistrict.id)
       );
-      toast.success("Subdistrict deleted successfully");
+      toast.success("Kecamatan berhasil dihapus");
     } catch (error) {
-      toast.error("Failed to delete subdistrict");
+      toast.error("Gagal menghapus kecamatan");
     }
   };
 
@@ -442,31 +452,31 @@ export default function LocationManagement() {
   return (
     <Layout>
       <div className="container mx-auto py-6">
-        <h1 className="text-2xl font-bold mb-6">Location Management</h1>
+        <h1 className="text-2xl font-bold mb-6">Manajemen Lokasi</h1>
 
         <Tabs defaultValue="branches" className="w-full">
           <TabsList className="grid grid-cols-3 w-full max-w-md mb-6">
             <TabsTrigger value="branches" className="flex items-center gap-2">
               <Building className="h-4 w-4" />
-              Branches
+              Cabang
             </TabsTrigger>
             <TabsTrigger
               value="subdistricts"
               className="flex items-center gap-2"
             >
               <MapPin className="h-4 w-4" />
-              Subdistricts
+              Wilayah
             </TabsTrigger>
             <TabsTrigger value="cities" className="flex items-center gap-2">
               <Landmark className="h-4 w-4" />
-              Cities
+              Kota
             </TabsTrigger>
           </TabsList>
 
           {/* Branches Tab */}
           <TabsContent value="branches">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold">Branches</h2>
+              <h2 className="text-xl font-semibold">Cabang</h2>
               <Button
                 onClick={() => {
                   setEditingBranch(null);
@@ -481,16 +491,16 @@ export default function LocationManagement() {
                 className="flex items-center gap-2"
               >
                 <Plus className="h-4 w-4" />
-                Add Branch
+                Tambah Cabang
               </Button>
             </div>
             <div className="bg-white shadow-md rounded-md overflow-hidden">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Subdistrict</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    <TableHead>Nama</TableHead>
+                    <TableHead>Wilayah</TableHead>
+                    <TableHead className="text-right">Aksi</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -524,7 +534,8 @@ export default function LocationManagement() {
                         colSpan={3}
                         className="text-center py-4 text-muted-foreground"
                       >
-                        No branches found. Click "Add Branch" to create one.
+                        Belum ada cabang. Klik "Tambah Cabang" untuk membuat
+                        baru.
                       </TableCell>
                     </TableRow>
                   )}
@@ -536,7 +547,7 @@ export default function LocationManagement() {
           {/* Subdistricts Tab */}
           <TabsContent value="subdistricts">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold">Subdistricts</h2>
+              <h2 className="text-xl font-semibold">Wilayah</h2>
               <Button
                 onClick={() => {
                   setEditingSubdistrict(null);
@@ -550,16 +561,16 @@ export default function LocationManagement() {
                 className="flex items-center gap-2"
               >
                 <Plus className="h-4 w-4" />
-                Add Subdistrict
+                Tambah Wilayah
               </Button>
             </div>
             <div className="bg-white shadow-md rounded-md overflow-hidden">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>City</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    <TableHead>Nama</TableHead>
+                    <TableHead>Kota</TableHead>
+                    <TableHead className="text-right">Aksi</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -595,8 +606,8 @@ export default function LocationManagement() {
                         colSpan={3}
                         className="text-center py-4 text-muted-foreground"
                       >
-                        No subdistricts found. Click "Add Subdistrict" to create
-                        one.
+                        Belum ada wilayah. Klik "Tambah Wilayah" untuk membuat
+                        baru.
                       </TableCell>
                     </TableRow>
                   )}
@@ -608,7 +619,7 @@ export default function LocationManagement() {
           {/* Cities Tab */}
           <TabsContent value="cities">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold">Cities</h2>
+              <h2 className="text-xl font-semibold">Kota</h2>
               <Button
                 onClick={() => {
                   setEditingCity(null);
@@ -621,15 +632,15 @@ export default function LocationManagement() {
                 className="flex items-center gap-2"
               >
                 <Plus className="h-4 w-4" />
-                Add City
+                Tambah Kota
               </Button>
             </div>
             <div className="bg-white shadow-md rounded-md overflow-hidden">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    <TableHead>Nama</TableHead>
+                    <TableHead className="text-right">Aksi</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -660,7 +671,7 @@ export default function LocationManagement() {
                         colSpan={2}
                         className="text-center py-4 text-muted-foreground"
                       >
-                        No cities found. Click "Add City" to create one.
+                        Belum ada kota. Klik "Tambah Kota" untuk membuat baru.
                       </TableCell>
                     </TableRow>
                   )}
@@ -675,13 +686,13 @@ export default function LocationManagement() {
           <AlertDialogContent className="sm:max-w-md">
             <AlertDialogHeader>
               <AlertDialogTitle>
-                {editingBranch ? "Edit Branch" : "Add New Branch"}
+                {editingBranch ? "Edit Cabang" : "Tambah Cabang Baru"}
               </AlertDialogTitle>
             </AlertDialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
                 <label htmlFor="branchName" className="text-sm font-medium">
-                  Branch Name
+                  Nama Cabang
                 </label>
                 <Input
                   id="branchName"
@@ -689,7 +700,7 @@ export default function LocationManagement() {
                   onChange={(e) =>
                     setBranchForm({ ...branchForm, name: e.target.value })
                   }
-                  placeholder="Enter branch name"
+                  placeholder="Masukkan nama cabang"
                 />
               </div>
               <div className="grid gap-2">
@@ -697,7 +708,7 @@ export default function LocationManagement() {
                   htmlFor="subdistrictSelect"
                   className="text-sm font-medium"
                 >
-                  Subdistrict
+                  Wilayah
                 </label>
                 <Select
                   value={branchForm.subdistrict_id}
@@ -706,7 +717,7 @@ export default function LocationManagement() {
                   }
                 >
                   <SelectTrigger id="subdistrictSelect">
-                    <SelectValue placeholder="Select subdistrict" />
+                    <SelectValue placeholder="Pilih wilayah" />
                   </SelectTrigger>
                   <SelectContent>
                     {subdistrictsList.map((subdistrict) => (
@@ -719,9 +730,9 @@ export default function LocationManagement() {
               </div>
             </div>
             <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogCancel>Batal</AlertDialogCancel>
               <AlertDialogAction onClick={handleSaveBranch}>
-                Save
+                Simpan
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
@@ -735,9 +746,7 @@ export default function LocationManagement() {
           <AlertDialogContent className="sm:max-w-md">
             <AlertDialogHeader>
               <AlertDialogTitle>
-                {editingSubdistrict
-                  ? "Edit Subdistrict"
-                  : "Add New Subdistrict"}
+                {editingSubdistrict ? "Edit Wilayah" : "Tambah Wilayah Baru"}
               </AlertDialogTitle>
             </AlertDialogHeader>
             <div className="grid gap-4 py-4">
@@ -746,7 +755,7 @@ export default function LocationManagement() {
                   htmlFor="subdistrictName"
                   className="text-sm font-medium"
                 >
-                  Subdistrict Name
+                  Nama Wilayah
                 </label>
                 <Input
                   id="subdistrictName"
@@ -757,12 +766,12 @@ export default function LocationManagement() {
                       name: e.target.value,
                     })
                   }
-                  placeholder="Enter subdistrict name"
+                  placeholder="Masukkan nama wilayah"
                 />
               </div>
               <div className="grid gap-2">
                 <label htmlFor="citySelect" className="text-sm font-medium">
-                  City
+                  Kota
                 </label>
                 <Select
                   value={subdistrictForm.city_id}
@@ -771,7 +780,7 @@ export default function LocationManagement() {
                   }
                 >
                   <SelectTrigger id="citySelect">
-                    <SelectValue placeholder="Select city" />
+                    <SelectValue placeholder="Pilih kota" />
                   </SelectTrigger>
                   <SelectContent>
                     {citiesList.map((city) => (
@@ -784,9 +793,9 @@ export default function LocationManagement() {
               </div>
             </div>
             <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogCancel>Batal</AlertDialogCancel>
               <AlertDialogAction onClick={handleSaveSubdistrict}>
-                Save
+                Simpan
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
@@ -797,13 +806,13 @@ export default function LocationManagement() {
           <AlertDialogContent className="sm:max-w-md">
             <AlertDialogHeader>
               <AlertDialogTitle>
-                {editingCity ? "Edit City" : "Add New City"}
+                {editingCity ? "Edit Kota" : "Tambah Kota Baru"}
               </AlertDialogTitle>
             </AlertDialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
                 <label htmlFor="cityName" className="text-sm font-medium">
-                  City Name
+                  Nama Kota
                 </label>
                 <Input
                   id="cityName"
@@ -811,14 +820,14 @@ export default function LocationManagement() {
                   onChange={(e) =>
                     setCityForm({ ...cityForm, name: e.target.value })
                   }
-                  placeholder="Enter city name"
+                  placeholder="Masukkan nama kota"
                 />
               </div>
             </div>
             <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogCancel>Batal</AlertDialogCancel>
               <AlertDialogAction onClick={handleSaveCity}>
-                Save
+                Simpan
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
@@ -828,19 +837,25 @@ export default function LocationManagement() {
         <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+              <AlertDialogTitle>Apakah Anda yakin?</AlertDialogTitle>
               <AlertDialogDescription>
-                This will permanently delete {itemToDelete?.type} "
-                {getDeleteItemName()}". This action cannot be undone.
+                Tindakan ini akan menghapus{" "}
+                {itemToDelete?.type === "branch"
+                  ? "cabang"
+                  : itemToDelete?.type === "subdistrict"
+                  ? "wilayah"
+                  : "kota"}{" "}
+                "{getDeleteItemName()}" secara permanen. Tindakan ini tidak
+                dapat dibatalkan.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogCancel>Batal</AlertDialogCancel>
               <AlertDialogAction
                 onClick={handleDelete}
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               >
-                Delete
+                Hapus
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
