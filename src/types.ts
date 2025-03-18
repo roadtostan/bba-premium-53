@@ -1,6 +1,4 @@
 
-import { UserRole, ReportStatus } from "./types";
-
 export type UserRole =
   | "super_admin"
   | "city_admin"
