@@ -1,3 +1,4 @@
+
 import {
   Card,
   CardContent,
@@ -95,7 +96,10 @@ export default function ReportCard({
         report.status === "pending_city" &&
         report.city_name === user.city));
 
-  const isEditable = user && canEditReport(user.id, report.id);
+  // Allow edit only for branch_user and super_admin roles
+  const isEditable = user && 
+    (user.role === "branch_user" || user.role === "super_admin") && 
+    canEditReport(user.id, report.id);
 
   return (
     <Card
@@ -121,6 +125,7 @@ export default function ReportCard({
           </div>
         </div>
       </CardHeader>
+      
       <CardContent className="py-2">
         <p className="text-sm text-gray-700 dark:text-gray-300 line-clamp-2">
           {report.content}
@@ -141,6 +146,7 @@ export default function ReportCard({
           </p>
         </div>
       </CardContent>
+      
       <CardFooter className="pt-2 flex justify-between">
         <Link to={`/report/${report.id}`}>
           <Button variant="ghost" size="sm" className="button-transition">

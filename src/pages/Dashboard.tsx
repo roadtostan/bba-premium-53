@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/components/AuthContext";
@@ -194,42 +195,44 @@ export default function Dashboard() {
             onValueChange={setActiveTab}
             className="w-full"
           >
-            <div className="border-b mb-4 w-full">
+            <div className="border-b mb-4 w-full overflow-hidden">
               <ScrollArea className="w-full pb-2">
-                <TabsList className="inline-flex w-max justify-start">
-                  <TabsTrigger
-                    value="all"
-                    className="data-[state=active]:border-b-2 data-[state=active]:border-primary whitespace-nowrap"
-                  >
-                    Semua Laporan
-                  </TabsTrigger>
-                  {user.role === "branch_user" && (
+                <div className="min-w-full inline-block pb-2">
+                  <TabsList className="inline-flex w-max justify-start">
                     <TabsTrigger
-                      value="draft"
+                      value="all"
                       className="data-[state=active]:border-b-2 data-[state=active]:border-primary whitespace-nowrap"
                     >
-                      Draf
+                      Semua Laporan
                     </TabsTrigger>
-                  )}
-                  <TabsTrigger
-                    value="pending"
-                    className="data-[state=active]:border-b-2 data-[state=active]:border-primary whitespace-nowrap"
-                  >
-                    Menunggu
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="approved"
-                    className="data-[state=active]:border-b-2 data-[state=active]:border-primary whitespace-nowrap"
-                  >
-                    Disetujui
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="rejected"
-                    className="data-[state=active]:border-b-2 data-[state=active]:border-primary whitespace-nowrap"
-                  >
-                    Ditolak
-                  </TabsTrigger>
-                </TabsList>
+                    {user.role === "branch_user" && (
+                      <TabsTrigger
+                        value="draft"
+                        className="data-[state=active]:border-b-2 data-[state=active]:border-primary whitespace-nowrap"
+                      >
+                        Draf
+                      </TabsTrigger>
+                    )}
+                    <TabsTrigger
+                      value="pending"
+                      className="data-[state=active]:border-b-2 data-[state=active]:border-primary whitespace-nowrap"
+                    >
+                      Menunggu
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="approved"
+                      className="data-[state=active]:border-b-2 data-[state=active]:border-primary whitespace-nowrap"
+                    >
+                      Disetujui
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="rejected"
+                      className="data-[state=active]:border-b-2 data-[state=active]:border-primary whitespace-nowrap"
+                    >
+                      Ditolak
+                    </TabsTrigger>
+                  </TabsList>
+                </div>
               </ScrollArea>
             </div>
 
