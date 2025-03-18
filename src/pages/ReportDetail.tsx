@@ -15,9 +15,10 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
-import { Report, ReportStatus } from "@/types";
+import { Report, ReportComment, ReportStatus } from "@/types";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { id as idLocale } from "date-fns/locale";
 import {
   ArrowLeft,
   Clock,
@@ -131,10 +132,10 @@ export default function ReportDetail() {
     user &&
     ((user.role === "subdistrict_admin" &&
       report.status === "pending_subdistrict" &&
-      report.subdistrictName === user.subdistrict) ||
+      report.subdistrict_name === user.subdistrict) ||
       (user.role === "city_admin" &&
         report.status === "pending_city" &&
-        report.cityName === user.city));
+        report.city_name === user.city));
 
   const isEditable = user && canEditReport(user.id, report.id);
 
@@ -177,7 +178,7 @@ export default function ReportDetail() {
 
       const updatedReport = { ...report };
       updatedReport.status = "rejected";
-      updatedReport.rejectionReason = reason || "Tidak ada alasan";
+      updatedReport.rejection_reason = reason || "Tidak ada alasan";
 
       setReport(updatedReport);
       toast.info(`Laporan telah ditolak`);
@@ -202,9 +203,9 @@ export default function ReportDetail() {
       const newComment = {
         id: `c${Date.now()}`,
         text: comment,
-        userId: user.id,
-        userName: user.name,
-        timestamp: new Date().toISOString(),
+        user_id: user.id,
+        user_name: user.name,
+        created_at: new Date().toISOString(),
       };
 
       const updatedReport = { ...report };
@@ -244,11 +245,11 @@ export default function ReportDetail() {
             </div>
 
             <div className="mt-2 text-muted-foreground flex flex-wrap gap-x-4 gap-y-1">
-              <span>Cabang: {report.branchName}</span>
+              <span>Cabang: {report.branch_name}</span>
               <span>•</span>
-              <span>Tanggal: {format(new Date(report.date), "PPP")}</span>
+              <span>Tanggal: {format(new Date(report.date), "PPP", { locale: idLocale })}</span>
               <span>•</span>
-              <span>Dibuat: {format(new Date(report.createdAt), "PPP")}</span>
+              <span>Dibuat: {format(new Date(report.created_at), "PPP", { locale: idLocale })}</span>
             </div>
           </div>
 
@@ -256,7 +257,7 @@ export default function ReportDetail() {
             <CardHeader>
               <CardTitle>Detail Laporan</CardTitle>
               <CardDescription>
-                Informasi penjualan untuk {report.branchName}
+                Informasi penjualan untuk {report.branch_name}
               </CardDescription>
             </CardHeader>
 
@@ -273,16 +274,16 @@ export default function ReportDetail() {
                   Total Penjualan
                 </h3>
                 <p className="text-xl font-bold">
-                  Rp{report.totalSales.toLocaleString()}
+                  Rp{report.total_sales.toLocaleString()}
                 </p>
               </div>
 
-              {report.status === "rejected" && report.rejectionReason && (
+              {report.status === "rejected" && report.rejection_reason && (
                 <div className="p-4 bg-status-rejected/5 rounded-md border border-status-rejected/20">
                   <h3 className="text-sm font-medium text-status-rejected mb-2">
                     Alasan Penolakan
                   </h3>
-                  <p>{report.rejectionReason}</p>
+                  <p>{report.rejection_reason}</p>
                 </div>
               )}
             </CardContent>
@@ -344,9 +345,9 @@ export default function ReportDetail() {
                     className="p-4 glass-panel rounded-lg border"
                   >
                     <div className="flex justify-between items-start">
-                      <h3 className="font-medium">{comment.userName}</h3>
+                      <h3 className="font-medium">{comment.user_name}</h3>
                       <span className="text-xs text-muted-foreground">
-                        {format(new Date(comment.timestamp), "PPP")}
+                        {format(new Date(comment.created_at), "PPP")}
                       </span>
                     </div>
                     <p className="mt-2 text-sm">{comment.text}</p>

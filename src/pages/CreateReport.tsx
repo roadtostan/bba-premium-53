@@ -1,18 +1,31 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { useAuth } from '@/components/AuthContext';
-import NavBar from '@/components/NavBar';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, Loader2, Save, Send } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
-import { toast } from 'sonner';
-import { LocationInfo, ProductInfo, ExpenseInfo, IncomeInfo, OtherExpense } from '@/types';
+import React, { useState, useEffect } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { useAuth } from "@/components/AuthContext";
+import NavBar from "@/components/NavBar";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { CalendarIcon, Loader2, Save, Send } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { format } from "date-fns";
+import { toast } from "sonner";
+import {
+  LocationInfo,
+  ProductInfo,
+  ExpenseInfo,
+  IncomeInfo,
+  OtherExpense,
+  ReportStatus,
+} from "@/types";
+import { createReport } from "@/lib/db";
+import { id as idLocale } from "date-fns/locale";
 
 export default function CreateReport() {
   const { user } = useAuth();
@@ -21,187 +34,281 @@ export default function CreateReport() {
   const isEditMode = !!id;
 
   // Form state
-  const [title, setTitle] = useState('Daily Sales Report');
-  const [content, setContent] = useState('');
+  const [title, setTitle] = useState("Daily Sales Report");
+  const [content, setContent] = useState("");
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDraft, setIsDraft] = useState(false);
-  
+
   // Block I: Location Information
   const [locationInfo, setLocationInfo] = useState<LocationInfo>({
-    cityName: user?.city || '',
-    districtName: user?.subdistrict || '',
-    branchName: user?.branch || '',
-    branchManager: user?.name || '',
+    city_name: user?.city || "",
+    subdistrict_name: user?.subdistrict || "",
+    branch_name: user?.branch || "",
+    branch_manager: user?.name || "",
   });
-  
+
   // Block II: Product Information
   const [productInfo, setProductInfo] = useState<ProductInfo>({
-    initialStock: 0,
-    remainingStock: 0,
+    initial_stock: 0,
+    remaining_stock: 0,
     testers: 0,
     rejects: 0,
     sold: 0,
   });
-  
+
   // Block III: Expense Information
   const [expenseInfo, setExpenseInfo] = useState<ExpenseInfo>({
-    employeeSalary: 0,
-    employeeBonus: 0,
-    cookingOil: 0,
-    lpgGas: 0,
-    plasticBags: 0,
+    employee_salary: 0,
+    employee_bonus: 0,
+    cooking_oil: 0,
+    lpg_gas: 0,
+    plastic_bags: 0,
     tissue: 0,
     soap: 0,
-    otherExpenses: [
-      { id: '1', description: '', amount: 0 },
-      { id: '2', description: '', amount: 0 },
-      { id: '3', description: '', amount: 0 },
+    other_expenses: [
+      { id: "1", description: "", amount: 0 },
+      { id: "2", description: "", amount: 0 },
+      { id: "3", description: "", amount: 0 },
     ],
-    totalExpenses: 0,
+    total_expenses: 0,
   });
-  
+
   // Block IV: Income Information
   const [incomeInfo, setIncomeInfo] = useState<IncomeInfo>({
-    cashReceipts: 0,
-    transferReceipts: 0,
-    remainingIncome: 0,
-    totalIncome: 0,
+    cash_receipts: 0,
+    transfer_receipts: 0,
+    remaining_income: 0,
+    total_income: 0,
   });
 
   useEffect(() => {
     // Calculate total expenses
-    const totalExpenses = 
-      expenseInfo.employeeSalary +
-      expenseInfo.employeeBonus +
-      expenseInfo.cookingOil +
-      expenseInfo.lpgGas +
-      expenseInfo.plasticBags +
+    const totalExpenses =
+      expenseInfo.employee_salary +
+      expenseInfo.employee_bonus +
+      expenseInfo.cooking_oil +
+      expenseInfo.lpg_gas +
+      expenseInfo.plastic_bags +
       expenseInfo.tissue +
       expenseInfo.soap +
-      expenseInfo.otherExpenses.reduce((sum, expense) => sum + expense.amount, 0);
-    
+      expenseInfo.other_expenses.reduce(
+        (sum, expense) => sum + expense.amount,
+        0
+      );
+
     // Calculate total income
-    const totalIncome = incomeInfo.cashReceipts + incomeInfo.transferReceipts;
-    
+    const totalIncome = incomeInfo.cash_receipts + incomeInfo.transfer_receipts;
+
     // Calculate remaining income (net)
     const remainingIncome = totalIncome - totalExpenses;
-    
-    setExpenseInfo(prev => ({ ...prev, totalExpenses }));
-    setIncomeInfo(prev => ({ 
-      ...prev, 
+
+    setExpenseInfo((prev) => ({ ...prev, totalExpenses }));
+    setIncomeInfo((prev) => ({
+      ...prev,
       totalIncome,
-      remainingIncome 
+      remainingIncome,
     }));
   }, [
-    expenseInfo.employeeSalary,
-    expenseInfo.employeeBonus,
-    expenseInfo.cookingOil,
-    expenseInfo.lpgGas,
-    expenseInfo.plasticBags,
+    expenseInfo.employee_salary,
+    expenseInfo.employee_bonus,
+    expenseInfo.cooking_oil,
+    expenseInfo.lpg_gas,
+    expenseInfo.plastic_bags,
     expenseInfo.tissue,
     expenseInfo.soap,
-    expenseInfo.otherExpenses,
-    incomeInfo.cashReceipts,
-    incomeInfo.transferReceipts
+    expenseInfo.other_expenses,
+    incomeInfo.cash_receipts,
+    incomeInfo.transfer_receipts,
   ]);
 
   // Calculate sales based on stock
   useEffect(() => {
-    if (productInfo.initialStock >= productInfo.remainingStock) {
-      const sold = productInfo.initialStock - productInfo.remainingStock - productInfo.testers - productInfo.rejects;
-      setProductInfo(prev => ({ ...prev, sold: sold >= 0 ? sold : 0 }));
+    if (productInfo.initial_stock >= productInfo.remaining_stock) {
+      const sold =
+        productInfo.initial_stock -
+        productInfo.remaining_stock -
+        productInfo.testers -
+        productInfo.rejects;
+      setProductInfo((prev) => ({ ...prev, sold: sold >= 0 ? sold : 0 }));
     }
-  }, [productInfo.initialStock, productInfo.remainingStock, productInfo.testers, productInfo.rejects]);
+  }, [
+    productInfo.initial_stock,
+    productInfo.remaining_stock,
+    productInfo.testers,
+    productInfo.rejects,
+  ]);
 
-  if (!user || user.role !== 'branch_user') {
-    navigate('/');
+  if (!user || user.role !== "branch_user") {
+    navigate("/");
     return null;
   }
 
   const handleLocationChange = (field: keyof LocationInfo, value: string) => {
-    setLocationInfo(prev => ({ ...prev, [field]: value }));
+    setLocationInfo((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleProductChange = (field: keyof ProductInfo, value: number) => {
-    setProductInfo(prev => ({ ...prev, [field]: value }));
+    setProductInfo((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleExpenseChange = (field: keyof Omit<ExpenseInfo, 'otherExpenses' | 'totalExpenses'>, value: number) => {
-    setExpenseInfo(prev => ({ ...prev, [field]: value }));
+  const handleExpenseChange = (
+    field: keyof Omit<ExpenseInfo, "other_expenses" | "total_expenses">,
+    value: number
+  ) => {
+    setExpenseInfo((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleOtherExpenseChange = (id: string, field: 'description' | 'amount', value: string | number) => {
-    setExpenseInfo(prev => ({
+  const handleOtherExpenseChange = (
+    id: string,
+    field: "description" | "amount",
+    value: string | number
+  ) => {
+    setExpenseInfo((prev) => ({
       ...prev,
-      otherExpenses: prev.otherExpenses.map(item => 
+      other_expenses: prev.other_expenses.map((item) =>
         item.id === id ? { ...item, [field]: value } : item
-      )
+      ),
     }));
   };
 
-  const handleIncomeChange = (field: keyof Omit<IncomeInfo, 'remainingIncome' | 'totalIncome'>, value: number) => {
-    setIncomeInfo(prev => ({ ...prev, [field]: value }));
+  const handleIncomeChange = (
+    field: keyof Omit<IncomeInfo, "remaining_income" | "total_income">,
+    value: number
+  ) => {
+    setIncomeInfo((prev) => ({ ...prev, [field]: value }));
   };
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(amount);
+    return new Intl.NumberFormat("id-ID", {
+      style: "currency",
+      currency: "IDR",
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount);
   };
 
   const validateForm = (): boolean => {
     if (!title.trim()) {
-      toast.error("Please enter a report title");
+      toast.error("Silakan masukkan judul laporan");
       return false;
     }
-    
+
     if (!date) {
-      toast.error("Please select a date");
+      toast.error("Silakan pilih tanggal");
       return false;
     }
-    
+
     if (!content.trim()) {
-      toast.error("Please enter report content");
+      toast.error("Silakan masukkan konten laporan");
       return false;
     }
-    
+
     // Validate location info
-    if (!locationInfo.cityName || !locationInfo.districtName || !locationInfo.branchName || !locationInfo.branchManager) {
-      toast.error("Please complete all location information");
+    if (
+      !locationInfo.city_name ||
+      !locationInfo.subdistrict_name ||
+      !locationInfo.branch_name ||
+      !locationInfo.branch_manager
+    ) {
+      toast.error("Silakan lengkapi semua informasi lokasi");
       return false;
     }
-    
+
     // Validate product info
-    if (productInfo.initialStock < 0 || productInfo.testers > 5) {
-      toast.error("Invalid product information. Note: Testers cannot exceed 5");
+    if (productInfo.initial_stock < 0 || productInfo.testers > 5) {
+      toast.error(
+        "Informasi produk tidak valid. Catatan: Tester tidak boleh melebihi 5"
+      );
       return false;
     }
-    
+
     return true;
   };
 
-  const handleSubmit = async (e: React.FormEvent, saveAsDraft: boolean = false) => {
+  const handleSubmit = async (
+    e: React.FormEvent,
+    saveAsDraft: boolean = false
+  ) => {
     e.preventDefault();
     setIsDraft(saveAsDraft);
-    
+
     if (!saveAsDraft && !validateForm()) {
       return;
     }
-    
+
     setIsSubmitting(true);
-    
+
     try {
-      // In a real app, this would call an API endpoint
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
-      
-      if (saveAsDraft) {
-        toast.success("Report saved as draft");
-      } else {
-        toast.success("Report submitted successfully");
-      }
-      
-      navigate('/');
+      // Hitung total pengeluaran
+      const totalExpenses =
+        expenseInfo.employee_salary +
+        expenseInfo.employee_bonus +
+        expenseInfo.cooking_oil +
+        expenseInfo.lpg_gas +
+        expenseInfo.plastic_bags +
+        expenseInfo.tissue +
+        expenseInfo.soap +
+        expenseInfo.other_expenses.reduce(
+          (sum, expense) => sum + expense.amount,
+          0
+        );
+
+      // Hitung total pendapatan
+      const totalIncome =
+        incomeInfo.cash_receipts + incomeInfo.transfer_receipts;
+
+      // Hitung sisa pendapatan (net)
+      const remainingIncome = totalIncome - totalExpenses;
+
+      const reportData = {
+        title,
+        content,
+        date: date?.toISOString(),
+        status: (saveAsDraft ? "draft" : "pending_subdistrict") as ReportStatus,
+
+        // Data lokasi
+        branch_name: locationInfo.branch_name,
+        subdistrict_name: locationInfo.subdistrict_name,
+        city_name: locationInfo.city_name,
+        branch_manager: locationInfo.branch_manager,
+
+        // Data produk
+        initial_stock: productInfo.initial_stock,
+        remaining_stock: productInfo.remaining_stock,
+        testers: productInfo.testers,
+        rejects: productInfo.rejects,
+        sold: productInfo.sold,
+
+        // Data pengeluaran
+        employee_salary: expenseInfo.employee_salary,
+        employee_bonus: expenseInfo.employee_bonus,
+        cooking_oil: expenseInfo.cooking_oil,
+        lpg_gas: expenseInfo.lpg_gas,
+        plastic_bags: expenseInfo.plastic_bags,
+        tissue: expenseInfo.tissue,
+        soap: expenseInfo.soap,
+        other_expenses: expenseInfo.other_expenses,
+        total_expenses: totalExpenses, // Total pengeluaran yang dihitung
+
+        // Data pendapatan
+        cash_receipts: incomeInfo.cash_receipts,
+        transfer_receipts: incomeInfo.transfer_receipts,
+        total_income: totalIncome, // Total pendapatan yang dihitung
+        remaining_income: remainingIncome, // Sisa pendapatan yang dihitung
+      };
+
+      await createReport(reportData);
+
+      toast.success(
+        saveAsDraft
+          ? "Laporan berhasil disimpan sebagai draft"
+          : "Laporan berhasil dikirim"
+      );
+      navigate("/");
     } catch (error) {
-      toast.error("Failed to submit report");
+      console.error("Error creating report:", error);
+      toast.error("Gagal membuat laporan: " + (error as Error).message);
     } finally {
       setIsSubmitting(false);
     }
@@ -212,24 +319,28 @@ export default function CreateReport() {
       <NavBar />
       <main className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto">
-          <h1 className="text-3xl font-bold mb-8">{isEditMode ? 'Edit Sales Report' : 'Create New Sales Report'}</h1>
-          
+          <h1 className="text-3xl font-bold mb-8">
+            {isEditMode
+              ? "Ubah Laporan Penjualan"
+              : "Buat Laporan Penjualan Baru"}
+          </h1>
+
           <form onSubmit={(e) => handleSubmit(e, false)} className="space-y-8">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-4">
                 <div>
-                  <Label htmlFor="title">Report Title</Label>
+                  <Label htmlFor="title">Judul Laporan</Label>
                   <Input
                     id="title"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
-                    placeholder="Daily Sales Report"
+                    placeholder="Laporan Penjualan Harian"
                     className="mt-1"
                   />
                 </div>
-                
+
                 <div>
-                  <Label htmlFor="date">Report Date</Label>
+                  <Label htmlFor="date">Tanggal Laporan</Label>
                   <Popover>
                     <PopoverTrigger asChild>
                       <Button
@@ -240,7 +351,11 @@ export default function CreateReport() {
                         )}
                       >
                         <CalendarIcon className="mr-2 h-4 w-4" />
-                        {date ? format(date, "PPP") : <span>Select a date</span>}
+                        {date ? (
+                          format(date, "PPP", { locale: idLocale })
+                        ) : (
+                          <span>Pilih tanggal</span>
+                        )}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
@@ -255,303 +370,393 @@ export default function CreateReport() {
                   </Popover>
                 </div>
               </div>
-              
+
               <div>
-                <Label htmlFor="content">Report Summary</Label>
+                <Label htmlFor="content">Ringkasan Laporan</Label>
                 <Textarea
                   id="content"
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
-                  placeholder="Provide a summary of your sales report..."
+                  placeholder="Berikan ringkasan laporan Anda..."
                   className="mt-1 h-24"
                 />
               </div>
             </div>
-            
+
             {/* Block I: Location Information */}
             <div className="glass-panel p-6 rounded-lg border">
-              <h2 className="text-xl font-semibold mb-4">Block I: Location Information</h2>
+              <h2 className="text-xl font-semibold mb-4">
+                Blok I: Informasi Lokasi
+              </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="cityName">City Name</Label>
+                  <Label htmlFor="cityName">Nama Kota</Label>
                   <Input
                     id="cityName"
-                    value={locationInfo.cityName}
-                    onChange={(e) => handleLocationChange('cityName', e.target.value)}
+                    value={locationInfo.city_name}
+                    onChange={(e) =>
+                      handleLocationChange("city_name", e.target.value)
+                    }
                     placeholder="City name"
                     className="mt-1"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="districtName">District Name</Label>
+                  <Label htmlFor="subdistrictName">Nama Wilayah</Label>
                   <Input
-                    id="districtName"
-                    value={locationInfo.districtName}
-                    onChange={(e) => handleLocationChange('districtName', e.target.value)}
-                    placeholder="District name"
+                    id="subdistrictName"
+                    value={locationInfo.subdistrict_name}
+                    onChange={(e) =>
+                      handleLocationChange("subdistrict_name", e.target.value)
+                    }
+                    placeholder="Nama Wilayah"
                     className="mt-1"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="branchName">Branch Name</Label>
+                  <Label htmlFor="branchName">Nama Cabang</Label>
                   <Input
                     id="branchName"
-                    value={locationInfo.branchName}
-                    onChange={(e) => handleLocationChange('branchName', e.target.value)}
-                    placeholder="Branch name"
+                    value={locationInfo.branch_name}
+                    onChange={(e) =>
+                      handleLocationChange("branch_name", e.target.value)
+                    }
+                    placeholder="Nama Cabang"
                     className="mt-1"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="branchManager">Branch Manager</Label>
+                  <Label htmlFor="branchManager">Penanggung Jawab Cabang</Label>
                   <Input
                     id="branchManager"
-                    value={locationInfo.branchManager}
-                    onChange={(e) => handleLocationChange('branchManager', e.target.value)}
-                    placeholder="Manager name"
+                    value={locationInfo.branch_manager}
+                    onChange={(e) =>
+                      handleLocationChange("branch_manager", e.target.value)
+                    }
+                    placeholder="Nama Penanggung Jawab"
                     className="mt-1"
                   />
                 </div>
               </div>
             </div>
-            
+
             {/* Block II: Product Information */}
             <div className="glass-panel p-6 rounded-lg border">
-              <h2 className="text-xl font-semibold mb-4">Block II: Product Information (in items)</h2>
+              <h2 className="text-xl font-semibold mb-4">
+                Blok II: Informasi Produk (dalam item)
+              </h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <Label htmlFor="initialStock">Initial Stock</Label>
+                  <Label htmlFor="initialStock">Stok Awal</Label>
                   <Input
                     id="initialStock"
                     type="number"
                     min="0"
-                    value={productInfo.initialStock || ''}
-                    onChange={(e) => handleProductChange('initialStock', Number(e.target.value))}
+                    value={productInfo.initial_stock || ""}
+                    onChange={(e) =>
+                      handleProductChange(
+                        "initial_stock",
+                        Number(e.target.value)
+                      )
+                    }
                     placeholder="0"
                     className="mt-1"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="remainingStock">Remaining Stock</Label>
+                  <Label htmlFor="remainingStock">Stok Tersedia</Label>
                   <Input
                     id="remainingStock"
                     type="number"
                     min="0"
-                    max={productInfo.initialStock}
-                    value={productInfo.remainingStock || ''}
-                    onChange={(e) => handleProductChange('remainingStock', Number(e.target.value))}
+                    max={productInfo.initial_stock}
+                    value={productInfo.remaining_stock || ""}
+                    onChange={(e) =>
+                      handleProductChange(
+                        "remaining_stock",
+                        Number(e.target.value)
+                      )
+                    }
                     placeholder="0"
                     className="mt-1"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="testers">Number of Testers (max 5)</Label>
+                  <Label htmlFor="testers">Jumlah Tester (maksimal 5)</Label>
                   <Input
                     id="testers"
                     type="number"
                     min="0"
                     max="5"
-                    value={productInfo.testers || ''}
-                    onChange={(e) => handleProductChange('testers', Number(e.target.value))}
+                    value={productInfo.testers || ""}
+                    onChange={(e) =>
+                      handleProductChange("testers", Number(e.target.value))
+                    }
                     placeholder="0"
                     className="mt-1"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="rejects">Number of Rejects</Label>
+                  <Label htmlFor="rejects">Jumlah Reject</Label>
                   <Input
                     id="rejects"
                     type="number"
                     min="0"
-                    value={productInfo.rejects || ''}
-                    onChange={(e) => handleProductChange('rejects', Number(e.target.value))}
+                    value={productInfo.rejects || ""}
+                    onChange={(e) =>
+                      handleProductChange("rejects", Number(e.target.value))
+                    }
                     placeholder="0"
                     className="mt-1"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="sold">Number Sold</Label>
+                  <Label htmlFor="sold">Jumlah Terjual</Label>
                   <div className="mt-1 py-2 px-3 border border-input rounded-md bg-muted/50">
                     {productInfo.sold}
                   </div>
                 </div>
               </div>
             </div>
-            
+
             {/* Block III: Expense Information */}
             <div className="glass-panel p-6 rounded-lg border">
-              <h2 className="text-xl font-semibold mb-4">Block III: Expense Information (in rupiah)</h2>
+              <h2 className="text-xl font-semibold mb-4">
+                Blok III: Informasi Pengeluaran (dalam rupiah)
+              </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="employeeSalary">Employee Salary</Label>
+                  <Label htmlFor="employeeSalary">Gaji Karyawan</Label>
                   <Input
-                    id="employeeSalary"
+                    id="employee_salary"
                     type="number"
                     min="0"
-                    value={expenseInfo.employeeSalary || ''}
-                    onChange={(e) => handleExpenseChange('employeeSalary', Number(e.target.value))}
+                    value={expenseInfo.employee_salary || ""}
+                    onChange={(e) =>
+                      handleExpenseChange(
+                        "employee_salary",
+                        Number(e.target.value)
+                      )
+                    }
                     placeholder="0"
                     className="mt-1"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="employeeBonus">Employee Bonus</Label>
+                  <Label htmlFor="employeeBonus">Bonus Karyawan</Label>
                   <Input
-                    id="employeeBonus"
+                    id="employee_bonus"
                     type="number"
                     min="0"
-                    value={expenseInfo.employeeBonus || ''}
-                    onChange={(e) => handleExpenseChange('employeeBonus', Number(e.target.value))}
+                    value={expenseInfo.employee_bonus || ""}
+                    onChange={(e) =>
+                      handleExpenseChange(
+                        "employee_bonus",
+                        Number(e.target.value)
+                      )
+                    }
                     placeholder="0"
                     className="mt-1"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="cookingOil">Cooking Oil</Label>
+                  <Label htmlFor="cookingOil">Minyak Goreng</Label>
                   <Input
-                    id="cookingOil"
+                    id="cooking_oil"
                     type="number"
                     min="0"
-                    value={expenseInfo.cookingOil || ''}
-                    onChange={(e) => handleExpenseChange('cookingOil', Number(e.target.value))}
+                    value={expenseInfo.cooking_oil || ""}
+                    onChange={(e) =>
+                      handleExpenseChange("cooking_oil", Number(e.target.value))
+                    }
                     placeholder="0"
                     className="mt-1"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="lpgGas">LPG Gas</Label>
+                  <Label htmlFor="lpgGas">Gas LPG</Label>
                   <Input
-                    id="lpgGas"
+                    id="lpg_gas"
                     type="number"
                     min="0"
-                    value={expenseInfo.lpgGas || ''}
-                    onChange={(e) => handleExpenseChange('lpgGas', Number(e.target.value))}
+                    value={expenseInfo.lpg_gas || ""}
+                    onChange={(e) =>
+                      handleExpenseChange("lpg_gas", Number(e.target.value))
+                    }
                     placeholder="0"
                     className="mt-1"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="plasticBags">Plastic Bags</Label>
+                  <Label htmlFor="plastic_bags">Kantong Plastik</Label>
                   <Input
-                    id="plasticBags"
+                    id="plastic_bags"
                     type="number"
                     min="0"
-                    value={expenseInfo.plasticBags || ''}
-                    onChange={(e) => handleExpenseChange('plasticBags', Number(e.target.value))}
+                    value={expenseInfo.plastic_bags || ""}
+                    onChange={(e) =>
+                      handleExpenseChange(
+                        "plastic_bags",
+                        Number(e.target.value)
+                      )
+                    }
                     placeholder="0"
                     className="mt-1"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="tissue">Tissue</Label>
+                  <Label htmlFor="tissue">Tisu</Label>
                   <Input
                     id="tissue"
                     type="number"
                     min="0"
-                    value={expenseInfo.tissue || ''}
-                    onChange={(e) => handleExpenseChange('tissue', Number(e.target.value))}
+                    value={expenseInfo.tissue || ""}
+                    onChange={(e) =>
+                      handleExpenseChange("tissue", Number(e.target.value))
+                    }
                     placeholder="0"
                     className="mt-1"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="soap">Soap</Label>
+                  <Label htmlFor="soap">Sabun</Label>
                   <Input
                     id="soap"
                     type="number"
                     min="0"
-                    value={expenseInfo.soap || ''}
-                    onChange={(e) => handleExpenseChange('soap', Number(e.target.value))}
+                    value={expenseInfo.soap || ""}
+                    onChange={(e) =>
+                      handleExpenseChange("soap", Number(e.target.value))
+                    }
                     placeholder="0"
                     className="mt-1"
                   />
                 </div>
               </div>
-              
-              <h3 className="text-lg font-medium mt-4 mb-2">Other Expenses</h3>
-              {expenseInfo.otherExpenses.map((expense, index) => (
-                <div key={expense.id} className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+
+              <h3 className="text-lg font-medium mt-4 mb-2">
+                Pengeluaran Lainnya
+              </h3>
+              {expenseInfo.other_expenses.map((expense, index) => (
+                <div
+                  key={expense.id}
+                  className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2"
+                >
                   <div>
-                    <Label htmlFor={`expense-desc-${expense.id}`}>Description {index + 1}</Label>
+                    <Label htmlFor={`expense-desc-${expense.id}`}>
+                      Deskripsi {index + 1}
+                    </Label>
                     <Input
                       id={`expense-desc-${expense.id}`}
                       value={expense.description}
-                      onChange={(e) => handleOtherExpenseChange(expense.id, 'description', e.target.value)}
+                      onChange={(e) =>
+                        handleOtherExpenseChange(
+                          expense.id,
+                          "description",
+                          e.target.value
+                        )
+                      }
                       placeholder="Expense description"
                       className="mt-1"
                     />
                   </div>
                   <div>
-                    <Label htmlFor={`expense-amount-${expense.id}`}>Amount {index + 1}</Label>
+                    <Label htmlFor={`expense-amount-${expense.id}`}>
+                      Jumlah {index + 1}
+                    </Label>
                     <Input
                       id={`expense-amount-${expense.id}`}
                       type="number"
                       min="0"
-                      value={expense.amount || ''}
-                      onChange={(e) => handleOtherExpenseChange(expense.id, 'amount', Number(e.target.value))}
+                      value={expense.amount || ""}
+                      onChange={(e) =>
+                        handleOtherExpenseChange(
+                          expense.id,
+                          "amount",
+                          Number(e.target.value)
+                        )
+                      }
                       placeholder="0"
                       className="mt-1"
                     />
                   </div>
                 </div>
               ))}
-              
+
               <div className="mt-4 p-4 border rounded-lg bg-muted/30">
                 <div className="flex justify-between items-center">
-                  <span className="font-semibold">Total Expenses:</span>
-                  <span className="text-lg font-bold">{formatCurrency(expenseInfo.totalExpenses)}</span>
+                  <span className="font-semibold">Total Pengeluaran:</span>
+                  <span className="text-lg font-bold">
+                    {formatCurrency(expenseInfo.total_expenses)}
+                  </span>
                 </div>
               </div>
             </div>
-            
+
             {/* Block IV: Income Information */}
             <div className="glass-panel p-6 rounded-lg border">
-              <h2 className="text-xl font-semibold mb-4">Block IV: Income Information (in rupiah)</h2>
+              <h2 className="text-xl font-semibold mb-4">
+                Blok IV: Informasi Pendapatan (dalam rupiah)
+              </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="cashReceipts">Cash Receipts</Label>
+                  <Label htmlFor="cashReceipts">Penerimaan Uang Tunai</Label>
                   <Input
-                    id="cashReceipts"
+                    id="cash_receipts"
                     type="number"
                     min="0"
-                    value={incomeInfo.cashReceipts || ''}
-                    onChange={(e) => handleIncomeChange('cashReceipts', Number(e.target.value))}
+                    value={incomeInfo.cash_receipts || ""}
+                    onChange={(e) =>
+                      handleIncomeChange(
+                        "cash_receipts",
+                        Number(e.target.value)
+                      )
+                    }
                     placeholder="0"
                     className="mt-1"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="transferReceipts">Transfer Receipts</Label>
+                  <Label htmlFor="transferReceipts">
+                    Penerimaan Uang Transfer
+                  </Label>
                   <Input
-                    id="transferReceipts"
+                    id="transfer_receipts"
                     type="number"
                     min="0"
-                    value={incomeInfo.transferReceipts || ''}
-                    onChange={(e) => handleIncomeChange('transferReceipts', Number(e.target.value))}
+                    value={incomeInfo.transfer_receipts || ""}
+                    onChange={(e) =>
+                      handleIncomeChange(
+                        "transfer_receipts",
+                        Number(e.target.value)
+                      )
+                    }
                     placeholder="0"
                     className="mt-1"
                   />
                 </div>
                 <div className="md:col-span-2">
-                  <Label htmlFor="totalIncome">Total Income</Label>
+                  <Label htmlFor="totalIncome">Total Pendapatan</Label>
                   <div className="mt-1 py-2 px-3 border border-input rounded-md bg-muted/50">
-                    {formatCurrency(incomeInfo.totalIncome)}
+                    {formatCurrency(incomeInfo.total_income)}
                   </div>
                 </div>
                 <div className="md:col-span-2">
-                  <Label htmlFor="remainingIncome">Remaining Income (Net)</Label>
-                  <div className={cn(
-                    "mt-1 py-2 px-3 border rounded-md font-medium",
-                    incomeInfo.remainingIncome >= 0 
-                      ? "bg-status-approved/10 border-status-approved/30 text-status-approved" 
-                      : "bg-status-rejected/10 border-status-rejected/30 text-status-rejected"
-                  )}>
-                    {formatCurrency(incomeInfo.remainingIncome)}
+                  <Label htmlFor="remainingIncome">Pendapatan Bersih</Label>
+                  <div
+                    className={cn(
+                      "mt-1 py-2 px-3 border rounded-md font-medium",
+                      incomeInfo.remaining_income >= 0
+                        ? "bg-status-approved/10 border-status-approved/30 text-status-approved"
+                        : "bg-status-rejected/10 border-status-rejected/30 text-status-rejected"
+                    )}
+                  >
+                    {formatCurrency(incomeInfo.remaining_income)}
                   </div>
                 </div>
               </div>
             </div>
-            
+
             <div className="flex justify-end space-x-4">
               <Button
                 type="button"
@@ -565,9 +770,9 @@ export default function CreateReport() {
                 ) : (
                   <Save className="h-4 w-4" />
                 )}
-                Save as Draft
+                Simpan sebagai Draft
               </Button>
-              
+
               <Button
                 type="submit"
                 className="button-transition button-hover flex items-center gap-2"
@@ -578,7 +783,7 @@ export default function CreateReport() {
                 ) : (
                   <Send className="h-4 w-4" />
                 )}
-                Submit Report
+                Kirim Laporan
               </Button>
             </div>
           </form>

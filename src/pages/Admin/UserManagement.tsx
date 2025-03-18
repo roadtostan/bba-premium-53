@@ -216,25 +216,70 @@ export default function UserManagement() {
   };
 
   const handleSaveUser = async () => {
-    if (!formData.name || !formData.role) {
-      toast.error("Mohon lengkapi semua field yang diperlukan");
-      return;
-    }
-
     try {
+      // Validasi dasar untuk semua role
+      if (!formData.name || !formData.role) {
+        toast.error("Nama dan Jabatan harus diisi");
+        return;
+      }
+
+      // Validasi berdasarkan role
+      switch (formData.role) {
+        case "branch_user":
+          if (!formData.branch || !formData.subdistrict || !formData.city) {
+            toast.error("User Cabang harus mengisi Cabang, Wilayah, dan Kota");
+            return;
+          }
+          break;
+        case "subdistrict_admin":
+          if (!formData.subdistrict || !formData.city) {
+            toast.error("Admin Wilayah harus mengisi Wilayah dan Kota");
+            return;
+          }
+          if (formData.branch) {
+            toast.error("Admin Wilayah tidak boleh memiliki Cabang");
+            return;
+          }
+          break;
+        case "city_admin":
+          if (!formData.city) {
+            toast.error("Admin Kota harus mengisi Kota");
+            return;
+          }
+          if (formData.branch || formData.subdistrict) {
+            toast.error("Admin Kota hanya boleh memiliki Kota");
+            return;
+          }
+          break;
+        case "super_admin":
+          if (formData.branch || formData.subdistrict || formData.city) {
+            toast.error(
+              "Super Admin tidak boleh memiliki Cabang, Wilayah, atau Kota"
+            );
+            return;
+          }
+          break;
+      }
+
       if (editingUser) {
         const updatedUser = await updateUser(editingUser.id, {
           name: formData.name,
           role: formData.role,
-          branch: formData.branch
-            ? getLocationName("branch", formData.branch)
-            : undefined,
-          subdistrict: formData.subdistrict
-            ? getLocationName("subdistrict", formData.subdistrict)
-            : undefined,
-          city: formData.city
-            ? getLocationName("city", formData.city)
-            : undefined,
+          branch:
+            formData.role === "branch_user"
+              ? getLocationName("branch", formData.branch!)
+              : undefined,
+          subdistrict:
+            formData.role === "branch_user" ||
+            formData.role === "subdistrict_admin"
+              ? getLocationName("subdistrict", formData.subdistrict!)
+              : undefined,
+          city:
+            formData.role === "branch_user" ||
+            formData.role === "subdistrict_admin" ||
+            formData.role === "city_admin"
+              ? getLocationName("city", formData.city!)
+              : undefined,
         });
         setUsersList((prev) =>
           prev.map((user) => (user.id === editingUser.id ? updatedUser : user))
@@ -242,8 +287,8 @@ export default function UserManagement() {
         toast.success("Data pengguna berhasil diperbarui");
       } else {
         // Untuk pengguna baru
-        setUsersList((prev) => [...prev, formData]);
-        toast.success("Pengguna baru berhasil ditambahkan");
+        // setUsersList((prev) => [...prev, formData]);
+        // toast.success("Pengguna baru berhasil ditambahkan");
       }
       setShowAddEditDialog(false);
     } catch (error) {
