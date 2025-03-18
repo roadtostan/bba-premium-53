@@ -321,17 +321,32 @@ export async function canEditReport(
 
 export async function createReport(reportData: Partial<Report>) {
   try {
+    // Ensure we have a branch_id, subdistrict_id, and city_id
+    if (!reportData.branch_id || !reportData.subdistrict_id || !reportData.city_id) {
+      throw new Error("Data lokasi tidak lengkap. Pastikan branch_id, subdistrict_id, dan city_id tersedia.");
+    }
+
+    // Calculate total sales based on product information if not provided
+    const totalSales = reportData.sold || 0;
+
+    const reportWithSales = {
+      ...reportData,
+      total_sales: totalSales,
+      branch_manager: reportData.branch_manager || ((await getCurrentUser()) as { id: string })?.id,
+      status: reportData.status || "draft",
+    };
+
     const { data, error } = await supabase
       .from("reports")
-      .insert({
-        ...reportData,
-        branch_manager: ((await getCurrentUser()) as { id: string })?.id,
-        status: reportData.status || "draft",
-      })
+      .insert(reportWithSales)
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error("Supabase error:", error);
+      throw error;
+    }
+    
     return data;
   } catch (error) {
     console.error("Error creating report:", error);

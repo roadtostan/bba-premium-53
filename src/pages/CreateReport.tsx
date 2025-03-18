@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "@/components/AuthContext";
@@ -24,7 +25,7 @@ import {
   OtherExpense,
   ReportStatus,
 } from "@/types";
-import { createReport } from "@/lib/db";
+import { createReport, getBranches, getSubdistricts, getCities } from "@/lib/data";
 import { id as idLocale } from "date-fns/locale";
 
 export default function CreateReport() {
@@ -39,6 +40,11 @@ export default function CreateReport() {
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDraft, setIsDraft] = useState(false);
+  
+  // Branch, subdistrict, and city data
+  const [branchId, setBranchId] = useState("");
+  const [subdistrictId, setSubdistrictId] = useState("");
+  const [cityId, setCityId] = useState("");
 
   // Block I: Location Information
   const [locationInfo, setLocationInfo] = useState<LocationInfo>({
@@ -82,6 +88,37 @@ export default function CreateReport() {
     total_income: 0,
   });
 
+  // Fetch branch, subdistrict, and city data for the user
+  useEffect(() => {
+    const fetchUserLocationData = async () => {
+      try {
+        if (user && user.branch) {
+          // Get branches to find the branch ID
+          const branches = await getBranches();
+          const userBranch = branches.find(b => b.name === user.branch);
+          
+          if (userBranch) {
+            setBranchId(userBranch.id);
+            setSubdistrictId(userBranch.subdistrict_id);
+            
+            // Get subdistrict to find the city ID
+            const subdistricts = await getSubdistricts();
+            const userSubdistrict = subdistricts.find(s => s.id === userBranch.subdistrict_id);
+            
+            if (userSubdistrict) {
+              setCityId(userSubdistrict.city_id);
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching location data:", error);
+        toast.error("Gagal mengambil data lokasi");
+      }
+    };
+    
+    fetchUserLocationData();
+  }, [user]);
+
   useEffect(() => {
     // Calculate total expenses
     const totalExpenses =
@@ -103,11 +140,11 @@ export default function CreateReport() {
     // Calculate remaining income (net)
     const remainingIncome = totalIncome - totalExpenses;
 
-    setExpenseInfo((prev) => ({ ...prev, totalExpenses }));
+    setExpenseInfo((prev) => ({ ...prev, total_expenses: totalExpenses }));
     setIncomeInfo((prev) => ({
       ...prev,
-      totalIncome,
-      remainingIncome,
+      total_income: totalIncome,
+      remaining_income: remainingIncome,
     }));
   }, [
     expenseInfo.employee_salary,
@@ -143,10 +180,6 @@ export default function CreateReport() {
     navigate("/");
     return null;
   }
-
-  const handleLocationChange = (field: keyof LocationInfo, value: string) => {
-    setLocationInfo((prev) => ({ ...prev, [field]: value }));
-  };
 
   const handleProductChange = (field: keyof ProductInfo, value: number) => {
     setProductInfo((prev) => ({ ...prev, [field]: value }));
@@ -204,22 +237,17 @@ export default function CreateReport() {
       return false;
     }
 
-    // Validate location info
-    if (
-      !locationInfo.city_name ||
-      !locationInfo.subdistrict_name ||
-      !locationInfo.branch_name ||
-      !locationInfo.branch_manager
-    ) {
-      toast.error("Silakan lengkapi semua informasi lokasi");
-      return false;
-    }
-
     // Validate product info
     if (productInfo.initial_stock < 0 || productInfo.testers > 5) {
       toast.error(
         "Informasi produk tidak valid. Catatan: Tester tidak boleh melebihi 5"
       );
+      return false;
+    }
+
+    // Ensure we have branch, subdistrict, and city IDs
+    if (!branchId || !subdistrictId || !cityId) {
+      toast.error("Data lokasi tidak lengkap. Harap hubungi administrator.");
       return false;
     }
 
@@ -240,34 +268,19 @@ export default function CreateReport() {
     setIsSubmitting(true);
 
     try {
-      // Hitung total pengeluaran
-      const totalExpenses =
-        expenseInfo.employee_salary +
-        expenseInfo.employee_bonus +
-        expenseInfo.cooking_oil +
-        expenseInfo.lpg_gas +
-        expenseInfo.plastic_bags +
-        expenseInfo.tissue +
-        expenseInfo.soap +
-        expenseInfo.other_expenses.reduce(
-          (sum, expense) => sum + expense.amount,
-          0
-        );
-
-      // Hitung total pendapatan
-      const totalIncome =
-        incomeInfo.cash_receipts + incomeInfo.transfer_receipts;
-
-      // Hitung sisa pendapatan (net)
-      const remainingIncome = totalIncome - totalExpenses;
-
+      // Prepare report data with the correct IDs for foreign keys
       const reportData = {
         title,
         content,
         date: date?.toISOString(),
         status: (saveAsDraft ? "draft" : "pending_subdistrict") as ReportStatus,
 
-        // Data lokasi
+        // Data lokasi dengan ID untuk foreign key
+        branch_id: branchId,
+        subdistrict_id: subdistrictId,
+        city_id: cityId,
+        
+        // Data lokasi nama untuk tampilan
         branch_name: locationInfo.branch_name,
         subdistrict_name: locationInfo.subdistrict_name,
         city_name: locationInfo.city_name,
@@ -289,13 +302,13 @@ export default function CreateReport() {
         tissue: expenseInfo.tissue,
         soap: expenseInfo.soap,
         other_expenses: expenseInfo.other_expenses,
-        total_expenses: totalExpenses, // Total pengeluaran yang dihitung
+        total_expenses: expenseInfo.total_expenses,
 
         // Data pendapatan
         cash_receipts: incomeInfo.cash_receipts,
         transfer_receipts: incomeInfo.transfer_receipts,
-        total_income: totalIncome, // Total pendapatan yang dihitung
-        remaining_income: remainingIncome, // Sisa pendapatan yang dihitung
+        total_income: incomeInfo.total_income,
+        remaining_income: incomeInfo.remaining_income,
       };
 
       await createReport(reportData);
@@ -394,11 +407,8 @@ export default function CreateReport() {
                   <Input
                     id="cityName"
                     value={locationInfo.city_name}
-                    onChange={(e) =>
-                      handleLocationChange("city_name", e.target.value)
-                    }
-                    placeholder="City name"
-                    className="mt-1"
+                    readOnly
+                    className="mt-1 bg-gray-100"
                   />
                 </div>
                 <div>
@@ -406,11 +416,8 @@ export default function CreateReport() {
                   <Input
                     id="subdistrictName"
                     value={locationInfo.subdistrict_name}
-                    onChange={(e) =>
-                      handleLocationChange("subdistrict_name", e.target.value)
-                    }
-                    placeholder="Nama Wilayah"
-                    className="mt-1"
+                    readOnly
+                    className="mt-1 bg-gray-100"
                   />
                 </div>
                 <div>
@@ -418,11 +425,8 @@ export default function CreateReport() {
                   <Input
                     id="branchName"
                     value={locationInfo.branch_name}
-                    onChange={(e) =>
-                      handleLocationChange("branch_name", e.target.value)
-                    }
-                    placeholder="Nama Cabang"
-                    className="mt-1"
+                    readOnly
+                    className="mt-1 bg-gray-100"
                   />
                 </div>
                 <div>
@@ -430,11 +434,8 @@ export default function CreateReport() {
                   <Input
                     id="branchManager"
                     value={locationInfo.branch_manager}
-                    onChange={(e) =>
-                      handleLocationChange("branch_manager", e.target.value)
-                    }
-                    placeholder="Nama Penanggung Jawab"
-                    className="mt-1"
+                    readOnly
+                    className="mt-1 bg-gray-100"
                   />
                 </div>
               </div>
@@ -656,7 +657,7 @@ export default function CreateReport() {
                           e.target.value
                         )
                       }
-                      placeholder="Expense description"
+                      placeholder="Deskripsi pengeluaran"
                       className="mt-1"
                     />
                   </div>
