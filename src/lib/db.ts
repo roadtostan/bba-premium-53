@@ -327,12 +327,11 @@ export async function createReport(reportData: Partial<Report>) {
     }
 
     // Calculate total sales based on product information if not provided
-    const totalSales = reportData.productInfo?.sold || 0;
+    const totalSales = reportData.totalSales || reportData.productInfo?.sold || 0;
 
     const reportWithSales = {
       ...reportData,
       totalSales: totalSales,
-      branchManager: reportData.branchManager || ((await getCurrentUser()) as { id: string })?.id,
       status: reportData.status || "draft",
     };
 
