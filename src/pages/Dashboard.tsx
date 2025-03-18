@@ -69,7 +69,6 @@ export default function Dashboard() {
   };
 
   const handleApprove = (reportId: string) => {
-    // In a real app, this would call an API
     const updatedReports = [...reports];
     const reportIndex = updatedReports.findIndex((r) => r.id === reportId);
 
@@ -100,9 +99,8 @@ export default function Dashboard() {
   };
 
   const handleReject = (reportId: string) => {
-    // In a real app, this would open a dialog to enter rejection reason and then call an API
     const reason = prompt("Please enter a reason for rejection:");
-    if (reason === null) return; // User canceled
+    if (reason === null) return;
 
     const updatedReports = [...reports];
     const reportIndex = updatedReports.findIndex((r) => r.id === reportId);
@@ -197,7 +195,7 @@ export default function Dashboard() {
             className="w-full"
           >
             <div className="border-b mb-4 w-full">
-              <ScrollArea className="w-full pb-2" orientation="horizontal">
+              <ScrollArea className="w-full pb-2">
                 <TabsList className="inline-flex w-max justify-start">
                   <TabsTrigger
                     value="all"
