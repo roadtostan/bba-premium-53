@@ -1,3 +1,4 @@
+
 // src/lib/db.ts
 import { supabase } from "@/lib/supabase";
 import type { Report, ReportStatus } from "@/types";
@@ -328,10 +329,14 @@ export async function createReport(reportData: Partial<Report>) {
 
     // Calculate total sales based on product information if not provided
     const totalSales = reportData.totalSales || reportData.productInfo?.sold || 0;
+    
+    // Extract branch manager from locationInfo if available
+    const branchManager = reportData.locationInfo?.branchManager || "";
 
     const reportWithSales = {
       ...reportData,
       totalSales: totalSales,
+      branch_manager: branchManager, // Map to the database column name
       status: reportData.status || "draft",
     };
 

@@ -29,6 +29,7 @@ export interface Report {
   createdBy: string;
   createdAt: string;
   updatedAt: string;
+  branch_manager?: string; // Adding the snake_case version to match DB column
   comments?: Comment[];
   rejectionReason?: string;
   locationInfo: LocationInfo;
