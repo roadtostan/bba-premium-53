@@ -31,13 +31,20 @@ export interface Report {
   content: string;
   date: string;
   status: ReportStatus;
-  total_sales: number;
-  branch_name: string;
-  subdistrict_name: string;
-  city_name: string;
-  branch_manager: string;
+  totalSales: number;
+  branchId: string;
+  branchName: string;
+  subdistrictId: string;
+  subdistrictName: string;
+  cityId: string;
+  cityName: string;
+  createdBy: string;
   rejection_reason?: string;
   comments?: ReportComment[];
+  locationInfo: LocationInfo;
+  productInfo: ProductInfo;
+  expenseInfo: ExpenseInfo;
+  incomeInfo: IncomeInfo;
 }
 
 export interface ReportComment {
@@ -49,15 +56,15 @@ export interface ReportComment {
 }
 
 export interface LocationInfo {
-  city_name: string;
-  subdistrict_name: string;
-  branch_name: string;
-  branch_manager: string;
+  cityName: string;
+  districtName: string;
+  branchName: string;
+  branchManager: string;
 }
 
 export interface ProductInfo {
-  initial_stock: number;
-  remaining_stock: number;
+  initialStock: number;
+  remainingStock: number;
   testers: number;
   rejects: number;
   sold: number;
@@ -70,20 +77,20 @@ export interface OtherExpense {
 }
 
 export interface ExpenseInfo {
-  employee_salary: number;
-  employee_bonus: number;
-  cooking_oil: number;
-  lpg_gas: number;
-  plastic_bags: number;
+  employeeSalary: number;
+  employeeBonus: number;
+  cookingOil: number;
+  lpgGas: number;
+  plasticBags: number;
   tissue: number;
   soap: number;
-  other_expenses: OtherExpense[];
-  total_expenses: number;
+  otherExpenses: OtherExpense[];
+  totalExpenses: number;
 }
 
 export interface IncomeInfo {
-  cash_receipts: number;
-  transfer_receipts: number;
-  remaining_income: number;
-  total_income: number;
+  cashReceipts: number;
+  transferReceipts: number;
+  remainingIncome: number;
+  totalIncome: number;
 }

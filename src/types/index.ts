@@ -1,3 +1,4 @@
+
 export type UserRole = "branch_user" | "subdistrict_admin" | "city_admin" | "super_admin";
 
 export type ReportStatus = "draft" | "pending_subdistrict" | "pending_city" | "approved" | "rejected";

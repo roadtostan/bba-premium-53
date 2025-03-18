@@ -24,6 +24,7 @@ import {
   IncomeInfo,
   OtherExpense,
   ReportStatus,
+  Report,
 } from "@/types";
 import { createReport, getBranches, getSubdistricts, getCities } from "@/lib/data";
 import { id as idLocale } from "date-fns/locale";
@@ -48,16 +49,16 @@ export default function CreateReport() {
 
   // Block I: Location Information
   const [locationInfo, setLocationInfo] = useState<LocationInfo>({
-    city_name: user?.city || "",
-    subdistrict_name: user?.subdistrict || "",
-    branch_name: user?.branch || "",
-    branch_manager: user?.name || "",
+    cityName: user?.city || "",
+    districtName: user?.subdistrict || "",
+    branchName: user?.branch || "",
+    branchManager: user?.name || "",
   });
 
   // Block II: Product Information
   const [productInfo, setProductInfo] = useState<ProductInfo>({
-    initial_stock: 0,
-    remaining_stock: 0,
+    initialStock: 0,
+    remainingStock: 0,
     testers: 0,
     rejects: 0,
     sold: 0,
@@ -65,27 +66,27 @@ export default function CreateReport() {
 
   // Block III: Expense Information
   const [expenseInfo, setExpenseInfo] = useState<ExpenseInfo>({
-    employee_salary: 0,
-    employee_bonus: 0,
-    cooking_oil: 0,
-    lpg_gas: 0,
-    plastic_bags: 0,
+    employeeSalary: 0,
+    employeeBonus: 0,
+    cookingOil: 0,
+    lpgGas: 0,
+    plasticBags: 0,
     tissue: 0,
     soap: 0,
-    other_expenses: [
+    otherExpenses: [
       { id: "1", description: "", amount: 0 },
       { id: "2", description: "", amount: 0 },
       { id: "3", description: "", amount: 0 },
     ],
-    total_expenses: 0,
+    totalExpenses: 0,
   });
 
   // Block IV: Income Information
   const [incomeInfo, setIncomeInfo] = useState<IncomeInfo>({
-    cash_receipts: 0,
-    transfer_receipts: 0,
-    remaining_income: 0,
-    total_income: 0,
+    cashReceipts: 0,
+    transferReceipts: 0,
+    remainingIncome: 0,
+    totalIncome: 0,
   });
 
   // Fetch branch, subdistrict, and city data for the user
@@ -122,56 +123,56 @@ export default function CreateReport() {
   useEffect(() => {
     // Calculate total expenses
     const totalExpenses =
-      expenseInfo.employee_salary +
-      expenseInfo.employee_bonus +
-      expenseInfo.cooking_oil +
-      expenseInfo.lpg_gas +
-      expenseInfo.plastic_bags +
+      expenseInfo.employeeSalary +
+      expenseInfo.employeeBonus +
+      expenseInfo.cookingOil +
+      expenseInfo.lpgGas +
+      expenseInfo.plasticBags +
       expenseInfo.tissue +
       expenseInfo.soap +
-      expenseInfo.other_expenses.reduce(
+      expenseInfo.otherExpenses.reduce(
         (sum, expense) => sum + expense.amount,
         0
       );
 
     // Calculate total income
-    const totalIncome = incomeInfo.cash_receipts + incomeInfo.transfer_receipts;
+    const totalIncome = incomeInfo.cashReceipts + incomeInfo.transferReceipts;
 
     // Calculate remaining income (net)
     const remainingIncome = totalIncome - totalExpenses;
 
-    setExpenseInfo((prev) => ({ ...prev, total_expenses: totalExpenses }));
+    setExpenseInfo((prev) => ({ ...prev, totalExpenses: totalExpenses }));
     setIncomeInfo((prev) => ({
       ...prev,
-      total_income: totalIncome,
-      remaining_income: remainingIncome,
+      totalIncome: totalIncome,
+      remainingIncome: remainingIncome,
     }));
   }, [
-    expenseInfo.employee_salary,
-    expenseInfo.employee_bonus,
-    expenseInfo.cooking_oil,
-    expenseInfo.lpg_gas,
-    expenseInfo.plastic_bags,
+    expenseInfo.employeeSalary,
+    expenseInfo.employeeBonus,
+    expenseInfo.cookingOil,
+    expenseInfo.lpgGas,
+    expenseInfo.plasticBags,
     expenseInfo.tissue,
     expenseInfo.soap,
-    expenseInfo.other_expenses,
-    incomeInfo.cash_receipts,
-    incomeInfo.transfer_receipts,
+    expenseInfo.otherExpenses,
+    incomeInfo.cashReceipts,
+    incomeInfo.transferReceipts,
   ]);
 
   // Calculate sales based on stock
   useEffect(() => {
-    if (productInfo.initial_stock >= productInfo.remaining_stock) {
+    if (productInfo.initialStock >= productInfo.remainingStock) {
       const sold =
-        productInfo.initial_stock -
-        productInfo.remaining_stock -
+        productInfo.initialStock -
+        productInfo.remainingStock -
         productInfo.testers -
         productInfo.rejects;
       setProductInfo((prev) => ({ ...prev, sold: sold >= 0 ? sold : 0 }));
     }
   }, [
-    productInfo.initial_stock,
-    productInfo.remaining_stock,
+    productInfo.initialStock,
+    productInfo.remainingStock,
     productInfo.testers,
     productInfo.rejects,
   ]);
@@ -186,7 +187,7 @@ export default function CreateReport() {
   };
 
   const handleExpenseChange = (
-    field: keyof Omit<ExpenseInfo, "other_expenses" | "total_expenses">,
+    field: keyof Omit<ExpenseInfo, "otherExpenses" | "totalExpenses">,
     value: number
   ) => {
     setExpenseInfo((prev) => ({ ...prev, [field]: value }));
@@ -199,14 +200,14 @@ export default function CreateReport() {
   ) => {
     setExpenseInfo((prev) => ({
       ...prev,
-      other_expenses: prev.other_expenses.map((item) =>
+      otherExpenses: prev.otherExpenses.map((item) =>
         item.id === id ? { ...item, [field]: value } : item
       ),
     }));
   };
 
   const handleIncomeChange = (
-    field: keyof Omit<IncomeInfo, "remaining_income" | "total_income">,
+    field: keyof Omit<IncomeInfo, "remainingIncome" | "totalIncome">,
     value: number
   ) => {
     setIncomeInfo((prev) => ({ ...prev, [field]: value }));
@@ -238,7 +239,7 @@ export default function CreateReport() {
     }
 
     // Validate product info
-    if (productInfo.initial_stock < 0 || productInfo.testers > 5) {
+    if (productInfo.initialStock < 0 || productInfo.testers > 5) {
       toast.error(
         "Informasi produk tidak valid. Catatan: Tester tidak boleh melebihi 5"
       );
@@ -268,49 +269,64 @@ export default function CreateReport() {
     setIsSubmitting(true);
 
     try {
-      // Prepare report data with the correct IDs for foreign keys
-      const reportData = {
+      // Prepare report data with the correct structure matching our Report type
+      const reportData: Partial<Report> = {
         title,
         content,
-        date: date?.toISOString(),
+        date: date?.toISOString().split('T')[0], // Format as YYYY-MM-DD
         status: (saveAsDraft ? "draft" : "pending_subdistrict") as ReportStatus,
 
-        // Data lokasi dengan ID untuk foreign key
-        branch_id: branchId,
-        subdistrict_id: subdistrictId,
-        city_id: cityId,
+        // Location data with IDs for foreign keys
+        branchId: branchId,
+        subdistrictId: subdistrictId,
+        cityId: cityId,
         
-        // Data lokasi nama untuk tampilan
-        branch_name: locationInfo.branch_name,
-        subdistrict_name: locationInfo.subdistrict_name,
-        city_name: locationInfo.city_name,
-        branch_manager: locationInfo.branch_manager,
-
-        // Data produk
-        initial_stock: productInfo.initial_stock,
-        remaining_stock: productInfo.remaining_stock,
-        testers: productInfo.testers,
-        rejects: productInfo.rejects,
-        sold: productInfo.sold,
-
-        // Data pengeluaran
-        employee_salary: expenseInfo.employee_salary,
-        employee_bonus: expenseInfo.employee_bonus,
-        cooking_oil: expenseInfo.cooking_oil,
-        lpg_gas: expenseInfo.lpg_gas,
-        plastic_bags: expenseInfo.plastic_bags,
-        tissue: expenseInfo.tissue,
-        soap: expenseInfo.soap,
-        other_expenses: expenseInfo.other_expenses,
-        total_expenses: expenseInfo.total_expenses,
-
-        // Data pendapatan
-        cash_receipts: incomeInfo.cash_receipts,
-        transfer_receipts: incomeInfo.transfer_receipts,
-        total_income: incomeInfo.total_income,
-        remaining_income: incomeInfo.remaining_income,
+        // Location info for display
+        branchName: locationInfo.branchName,
+        subdistrictName: locationInfo.districtName,
+        cityName: locationInfo.cityName,
+        createdBy: user?.id || "",
+        
+        // Include structured data blocks
+        locationInfo: {
+          cityName: locationInfo.cityName,
+          districtName: locationInfo.districtName,
+          branchName: locationInfo.branchName,
+          branchManager: locationInfo.branchManager,
+        },
+        
+        productInfo: {
+          initialStock: productInfo.initialStock,
+          remainingStock: productInfo.remainingStock,
+          testers: productInfo.testers,
+          rejects: productInfo.rejects,
+          sold: productInfo.sold,
+        },
+        
+        expenseInfo: {
+          employeeSalary: expenseInfo.employeeSalary,
+          employeeBonus: expenseInfo.employeeBonus,
+          cookingOil: expenseInfo.cookingOil,
+          lpgGas: expenseInfo.lpgGas,
+          plasticBags: expenseInfo.plasticBags,
+          tissue: expenseInfo.tissue,
+          soap: expenseInfo.soap,
+          otherExpenses: expenseInfo.otherExpenses,
+          totalExpenses: expenseInfo.totalExpenses,
+        },
+        
+        incomeInfo: {
+          cashReceipts: incomeInfo.cashReceipts,
+          transferReceipts: incomeInfo.transferReceipts,
+          totalIncome: incomeInfo.totalIncome,
+          remainingIncome: incomeInfo.remainingIncome,
+        },
+        
+        // Total sales (from product info)
+        totalSales: productInfo.sold,
       };
 
+      console.log("Sending report data:", reportData);
       await createReport(reportData);
 
       toast.success(
@@ -406,7 +422,7 @@ export default function CreateReport() {
                   <Label htmlFor="cityName">Nama Kota</Label>
                   <Input
                     id="cityName"
-                    value={locationInfo.city_name}
+                    value={locationInfo.cityName}
                     readOnly
                     className="mt-1 bg-gray-100"
                   />
@@ -415,7 +431,7 @@ export default function CreateReport() {
                   <Label htmlFor="subdistrictName">Nama Wilayah</Label>
                   <Input
                     id="subdistrictName"
-                    value={locationInfo.subdistrict_name}
+                    value={locationInfo.districtName}
                     readOnly
                     className="mt-1 bg-gray-100"
                   />
@@ -424,7 +440,7 @@ export default function CreateReport() {
                   <Label htmlFor="branchName">Nama Cabang</Label>
                   <Input
                     id="branchName"
-                    value={locationInfo.branch_name}
+                    value={locationInfo.branchName}
                     readOnly
                     className="mt-1 bg-gray-100"
                   />
@@ -433,7 +449,7 @@ export default function CreateReport() {
                   <Label htmlFor="branchManager">Penanggung Jawab Cabang</Label>
                   <Input
                     id="branchManager"
-                    value={locationInfo.branch_manager}
+                    value={locationInfo.branchManager}
                     readOnly
                     className="mt-1 bg-gray-100"
                   />
@@ -453,10 +469,10 @@ export default function CreateReport() {
                     id="initialStock"
                     type="number"
                     min="0"
-                    value={productInfo.initial_stock || ""}
+                    value={productInfo.initialStock || ""}
                     onChange={(e) =>
                       handleProductChange(
-                        "initial_stock",
+                        "initialStock",
                         Number(e.target.value)
                       )
                     }
@@ -470,11 +486,11 @@ export default function CreateReport() {
                     id="remainingStock"
                     type="number"
                     min="0"
-                    max={productInfo.initial_stock}
-                    value={productInfo.remaining_stock || ""}
+                    max={productInfo.initialStock}
+                    value={productInfo.remainingStock || ""}
                     onChange={(e) =>
                       handleProductChange(
-                        "remaining_stock",
+                        "remainingStock",
                         Number(e.target.value)
                       )
                     }
@@ -529,13 +545,13 @@ export default function CreateReport() {
                 <div>
                   <Label htmlFor="employeeSalary">Gaji Karyawan</Label>
                   <Input
-                    id="employee_salary"
+                    id="employeeSalary"
                     type="number"
                     min="0"
-                    value={expenseInfo.employee_salary || ""}
+                    value={expenseInfo.employeeSalary || ""}
                     onChange={(e) =>
                       handleExpenseChange(
-                        "employee_salary",
+                        "employeeSalary",
                         Number(e.target.value)
                       )
                     }
@@ -546,13 +562,13 @@ export default function CreateReport() {
                 <div>
                   <Label htmlFor="employeeBonus">Bonus Karyawan</Label>
                   <Input
-                    id="employee_bonus"
+                    id="employeeBonus"
                     type="number"
                     min="0"
-                    value={expenseInfo.employee_bonus || ""}
+                    value={expenseInfo.employeeBonus || ""}
                     onChange={(e) =>
                       handleExpenseChange(
-                        "employee_bonus",
+                        "employeeBonus",
                         Number(e.target.value)
                       )
                     }
@@ -563,12 +579,12 @@ export default function CreateReport() {
                 <div>
                   <Label htmlFor="cookingOil">Minyak Goreng</Label>
                   <Input
-                    id="cooking_oil"
+                    id="cookingOil"
                     type="number"
                     min="0"
-                    value={expenseInfo.cooking_oil || ""}
+                    value={expenseInfo.cookingOil || ""}
                     onChange={(e) =>
-                      handleExpenseChange("cooking_oil", Number(e.target.value))
+                      handleExpenseChange("cookingOil", Number(e.target.value))
                     }
                     placeholder="0"
                     className="mt-1"
@@ -577,27 +593,27 @@ export default function CreateReport() {
                 <div>
                   <Label htmlFor="lpgGas">Gas LPG</Label>
                   <Input
-                    id="lpg_gas"
+                    id="lpgGas"
                     type="number"
                     min="0"
-                    value={expenseInfo.lpg_gas || ""}
+                    value={expenseInfo.lpgGas || ""}
                     onChange={(e) =>
-                      handleExpenseChange("lpg_gas", Number(e.target.value))
+                      handleExpenseChange("lpgGas", Number(e.target.value))
                     }
                     placeholder="0"
                     className="mt-1"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="plastic_bags">Kantong Plastik</Label>
+                  <Label htmlFor="plasticBags">Kantong Plastik</Label>
                   <Input
-                    id="plastic_bags"
+                    id="plasticBags"
                     type="number"
                     min="0"
-                    value={expenseInfo.plastic_bags || ""}
+                    value={expenseInfo.plasticBags || ""}
                     onChange={(e) =>
                       handleExpenseChange(
-                        "plastic_bags",
+                        "plasticBags",
                         Number(e.target.value)
                       )
                     }
@@ -638,7 +654,7 @@ export default function CreateReport() {
               <h3 className="text-lg font-medium mt-4 mb-2">
                 Pengeluaran Lainnya
               </h3>
-              {expenseInfo.other_expenses.map((expense, index) => (
+              {expenseInfo.otherExpenses.map((expense, index) => (
                 <div
                   key={expense.id}
                   className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2"
@@ -688,7 +704,7 @@ export default function CreateReport() {
                 <div className="flex justify-between items-center">
                   <span className="font-semibold">Total Pengeluaran:</span>
                   <span className="text-lg font-bold">
-                    {formatCurrency(expenseInfo.total_expenses)}
+                    {formatCurrency(expenseInfo.totalExpenses)}
                   </span>
                 </div>
               </div>
@@ -703,13 +719,13 @@ export default function CreateReport() {
                 <div>
                   <Label htmlFor="cashReceipts">Penerimaan Uang Tunai</Label>
                   <Input
-                    id="cash_receipts"
+                    id="cashReceipts"
                     type="number"
                     min="0"
-                    value={incomeInfo.cash_receipts || ""}
+                    value={incomeInfo.cashReceipts || ""}
                     onChange={(e) =>
                       handleIncomeChange(
-                        "cash_receipts",
+                        "cashReceipts",
                         Number(e.target.value)
                       )
                     }
@@ -722,13 +738,13 @@ export default function CreateReport() {
                     Penerimaan Uang Transfer
                   </Label>
                   <Input
-                    id="transfer_receipts"
+                    id="transferReceipts"
                     type="number"
                     min="0"
-                    value={incomeInfo.transfer_receipts || ""}
+                    value={incomeInfo.transferReceipts || ""}
                     onChange={(e) =>
                       handleIncomeChange(
-                        "transfer_receipts",
+                        "transferReceipts",
                         Number(e.target.value)
                       )
                     }
@@ -739,7 +755,7 @@ export default function CreateReport() {
                 <div className="md:col-span-2">
                   <Label htmlFor="totalIncome">Total Pendapatan</Label>
                   <div className="mt-1 py-2 px-3 border border-input rounded-md bg-muted/50">
-                    {formatCurrency(incomeInfo.total_income)}
+                    {formatCurrency(incomeInfo.totalIncome)}
                   </div>
                 </div>
                 <div className="md:col-span-2">
@@ -747,12 +763,12 @@ export default function CreateReport() {
                   <div
                     className={cn(
                       "mt-1 py-2 px-3 border rounded-md font-medium",
-                      incomeInfo.remaining_income >= 0
+                      incomeInfo.remainingIncome >= 0
                         ? "bg-status-approved/10 border-status-approved/30 text-status-approved"
                         : "bg-status-rejected/10 border-status-rejected/30 text-status-rejected"
                     )}
                   >
-                    {formatCurrency(incomeInfo.remaining_income)}
+                    {formatCurrency(incomeInfo.remainingIncome)}
                   </div>
                 </div>
               </div>
