@@ -203,7 +203,7 @@ export default function Dashboard() {
                       value="all"
                       className="data-[state=active]:border-b-2 data-[state=active]:border-primary whitespace-nowrap"
                     >
-                      Semua Laporan
+                      Semua
                     </TabsTrigger>
                     {user.role === "branch_user" && (
                       <TabsTrigger
@@ -217,7 +217,7 @@ export default function Dashboard() {
                       value="pending"
                       className="data-[state=active]:border-b-2 data-[state=active]:border-primary whitespace-nowrap"
                     >
-                      Menunggu
+                      Tunggu
                     </TabsTrigger>
                     <TabsTrigger
                       value="approved"

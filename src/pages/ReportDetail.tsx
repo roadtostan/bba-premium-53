@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/components/AuthContext";
@@ -138,7 +137,10 @@ export default function ReportDetail() {
         report.status === "pending_city" &&
         report.cityName === user.city));
 
-  const isEditable = user && canEditReport(user.id, report.id);
+  const isEditable =
+    user &&
+    (user.role === "branch_user" || user.role === "super_admin") &&
+    canEditReport(user.id, report.id);
 
   const handleApprove = async () => {
     setIsSubmitting(true);
@@ -248,9 +250,17 @@ export default function ReportDetail() {
             <div className="mt-2 text-muted-foreground flex flex-wrap gap-x-4 gap-y-1">
               <span>Cabang: {report.branchName}</span>
               <span>•</span>
-              <span>Tanggal: {format(new Date(report.date), "PPP", { locale: idLocale })}</span>
+              <span>
+                Tanggal:{" "}
+                {format(new Date(report.date), "PPP", { locale: idLocale })}
+              </span>
               <span>•</span>
-              <span>Dibuat: {format(new Date(report.created_at), "PPP", { locale: idLocale })}</span>
+              <span>
+                Dibuat:{" "}
+                {format(new Date(report.created_at), "PPP", {
+                  locale: idLocale,
+                })}
+              </span>
             </div>
           </div>
 
@@ -275,7 +285,7 @@ export default function ReportDetail() {
                   Total Penjualan
                 </h3>
                 <p className="text-xl font-bold">
-                  Rp{report.totalSales.toLocaleString()}
+                  Rp{(report.totalSales || 0).toLocaleString()}
                 </p>
               </div>
 
@@ -348,7 +358,9 @@ export default function ReportDetail() {
                     <div className="flex justify-between items-start">
                       <h3 className="font-medium">{comment.user_name}</h3>
                       <span className="text-xs text-muted-foreground">
-                        {format(new Date(comment.created_at), "PPP")}
+                        {format(new Date(comment.created_at), "PPP", {
+                          locale: idLocale,
+                        })}
                       </span>
                     </div>
                     <p className="mt-2 text-sm">{comment.text}</p>

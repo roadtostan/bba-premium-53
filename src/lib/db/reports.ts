@@ -1,6 +1,20 @@
-
 import { supabase } from "@/lib/supabase";
 import type { Report, ReportStatus } from "@/types";
+
+// Fungsi helper untuk transformasi data
+function transformReportData(report: any): Report {
+  return {
+    ...report,
+    totalSales: report.total_sales || 0,
+    branchName: report.branch_name,
+    subdistrictName: report.subdistrict_name,
+    cityName: report.city_name,
+    branchManager: report.branch_manager,
+    createdAt: report.created_at,
+    updatedAt: report.updated_at,
+    rejectionReason: report.rejection_reason,
+  };
+}
 
 // Fungsi untuk mendapatkan reports dengan filter
 export async function getReports(filters?: {
@@ -50,7 +64,7 @@ export async function getReports(filters?: {
 
   const { data: reports, error } = await query;
   if (error) throw error;
-  return reports;
+  return reports.map(transformReportData);
 }
 
 // Fungsi untuk mendapatkan single report by ID
@@ -69,7 +83,7 @@ export async function getReportById(reportId: string) {
       throw new Error("Report not found");
     }
 
-    return report;
+    return transformReportData(report);
   } catch (error) {
     console.error("Error in getReportById:", error);
     throw error;
@@ -87,7 +101,7 @@ export async function getReportsByUser(userId: string) {
       throw error;
     }
 
-    return reports || [];
+    return (reports || []).map(transformReportData);
   } catch (error) {
     console.error("Error in getReportsByUser:", error);
     throw error;
@@ -101,21 +115,32 @@ export const getReportsByStatus = async (
   return (await getReportsByUser(userId)).filter((r) => r.status === status);
 };
 
-// Update fungsi canCreateNewReport untuk menggunakan RPC
+// Update fungsi canCreateNewReport untuk menggunakan checkCanCreateReport
 export async function canCreateNewReport(userId: string): Promise<boolean> {
   try {
-    const { data, error } = await supabase.rpc("can_create_new_report", {
+    return await checkCanCreateReport(userId);
+  } catch (error) {
+    console.error("Error in canCreateNewReport:", error);
+    return false;
+  }
+}
+
+// Fungsi untuk mengecek apakah user bisa membuat laporan baru
+export async function checkCanCreateReport(userId: string): Promise<boolean> {
+  try {
+    // Menggunakan RPC untuk menghindari masalah policy
+    const { data, error } = await supabase.rpc("check_can_create_report", {
       p_user_id: userId,
     });
 
     if (error) {
-      console.error("Error checking create permission:", error);
+      console.error("Error checking pending reports:", error);
       return false;
     }
 
     return data || false;
   } catch (error) {
-    console.error("Error in canCreateNewReport:", error);
+    console.error("Error in checkCanCreateReport:", error);
     return false;
   }
 }
@@ -146,13 +171,20 @@ export async function canEditReport(
 export async function createReport(reportData: Partial<Report>) {
   try {
     // Ensure we have a branchId, subdistrictId, and cityId
-    if (!reportData.branchId || !reportData.subdistrictId || !reportData.cityId) {
-      throw new Error("Data lokasi tidak lengkap. Pastikan branchId, subdistrictId, dan cityId tersedia.");
+    if (
+      !reportData.branchId ||
+      !reportData.subdistrictId ||
+      !reportData.cityId
+    ) {
+      throw new Error(
+        "Data lokasi tidak lengkap. Pastikan branchId, subdistrictId, dan cityId tersedia."
+      );
     }
 
     // Calculate total sales based on product information if not provided
-    const totalSales = reportData.totalSales || reportData.productInfo?.sold || 0;
-    
+    const totalSales =
+      reportData.totalSales || reportData.productInfo?.sold || 0;
+
     // Extract branch manager from locationInfo if available
     const branchManager = reportData.locationInfo?.branchManager || "";
 
@@ -173,7 +205,7 @@ export async function createReport(reportData: Partial<Report>) {
       console.error("Supabase error:", error);
       throw error;
     }
-    
+
     return data;
   } catch (error) {
     console.error("Error creating report:", error);
@@ -211,7 +243,7 @@ export async function getPendingActionReports(userId: string) {
       return [];
     }
 
-    return reports || [];
+    return (reports || []).map(transformReportData);
   } catch (error) {
     console.error("Error in getPendingActionReports:", error);
     return [];
@@ -250,13 +282,13 @@ export async function addReportComment(
     // Transform data structure to match expected format
     // Fix: Handle type safety for the users object
     let userName = "Unknown User";
-    
+
     if (comment.users) {
       // Check if users is an array and has at least one element
       if (Array.isArray(comment.users) && comment.users.length > 0) {
         // Access the name from the first element if it exists
         userName = comment.users[0]?.name || "Unknown User";
-      } else if (typeof comment.users === 'object' && comment.users !== null) {
+      } else if (typeof comment.users === "object" && comment.users !== null) {
         // If users is a single object, try to access name directly
         userName = (comment.users as { name?: string }).name || "Unknown User";
       }

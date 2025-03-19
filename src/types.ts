@@ -38,8 +38,7 @@ export interface Report {
   subdistrictName: string;
   cityId: string;
   cityName: string;
-  createdBy: string;
-  branch_manager?: string; // Adding the snake_case version to match DB column
+  branchManager: string;
   rejection_reason?: string;
   comments?: ReportComment[];
   locationInfo: LocationInfo;

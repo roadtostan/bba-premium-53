@@ -116,7 +116,7 @@ export default function ReportCard({
             <CardTitle className="text-lg">{report.title}</CardTitle>
             <CardDescription>
               {report.branchName} •{" "}
-              {format(new Date(report.date), "MMM dd, yyyy")}
+              {format(new Date(report.date), "dd MMM yyyy")}
             </CardDescription>
           </div>
           <div className="flex items-center gap-1">
