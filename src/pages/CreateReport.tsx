@@ -285,7 +285,7 @@ export default function CreateReport() {
         branchName: locationInfo.branchName,
         subdistrictName: locationInfo.districtName,
         cityName: locationInfo.cityName,
-        createdBy: user?.id || "",
+        branchManager: locationInfo.branchManager,
         
         // Include structured data blocks
         locationInfo: {
@@ -393,6 +393,7 @@ export default function CreateReport() {
                         selected={date}
                         onSelect={setDate}
                         initialFocus
+                        locale={idLocale}
                         className={cn("p-3 pointer-events-auto")}
                       />
                     </PopoverContent>
