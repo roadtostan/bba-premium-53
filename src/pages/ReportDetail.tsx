@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/components/AuthContext";
 import NavBar from "@/components/NavBar";
-import { getReportById, addReportComment } from "@/lib/data";
+import { getReportById, addReportComment, approveReport, rejectReport, canEditReport } from "@/lib/data";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -28,7 +28,6 @@ import {
   Send,
   FileEdit,
 } from "lucide-react";
-import { canEditReport } from "@/lib/data";
 
 export default function ReportDetail() {
   const { id } = useParams<{ id: string }>();
@@ -145,26 +144,28 @@ export default function ReportDetail() {
   const handleApprove = async () => {
     setIsSubmitting(true);
     try {
-      await new Promise((resolve) => setTimeout(resolve, 800));
-
-      const updatedReport = { ...report };
-
-      if (
-        user.role === "subdistrict_admin" &&
-        report.status === "pending_subdistrict"
-      ) {
-        updatedReport.status = "pending_city";
+      const updatedReportData = await approveReport(report.id, report.status);
+      
+      setReport(prev => {
+        if (!prev) return null;
+        
+        const newStatus = prev.status === "pending_subdistrict" 
+          ? "pending_city" 
+          : "approved";
+          
+        return {
+          ...prev,
+          status: newStatus
+        };
+      });
+      
+      if (report.status === "pending_subdistrict") {
         toast.success(`Laporan disetujui dan dikirim ke Admin Kota`);
-      } else if (
-        user.role === "city_admin" &&
-        report.status === "pending_city"
-      ) {
-        updatedReport.status = "approved";
+      } else {
         toast.success(`Laporan berhasil disetujui`);
       }
-
-      setReport(updatedReport);
     } catch (error) {
+      console.error("Error approving report:", error);
       toast.error("Gagal menyetujui laporan");
     } finally {
       setIsSubmitting(false);
@@ -174,18 +175,23 @@ export default function ReportDetail() {
   const handleReject = async () => {
     const reason = prompt("Masukkan alasan penolakan:");
     if (reason === null) return;
-
+    
     setIsSubmitting(true);
     try {
-      await new Promise((resolve) => setTimeout(resolve, 800));
-
-      const updatedReport = { ...report };
-      updatedReport.status = "rejected";
-      updatedReport.rejection_reason = reason || "Tidak ada alasan";
-
-      setReport(updatedReport);
+      await rejectReport(report.id, reason || "Tidak ada alasan");
+      
+      setReport(prev => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          status: "rejected",
+          rejectionReason: reason || "Tidak ada alasan"
+        };
+      });
+      
       toast.info(`Laporan telah ditolak`);
     } catch (error) {
+      console.error("Error rejecting report:", error);
       toast.error("Gagal menolak laporan");
     } finally {
       setIsSubmitting(false);
@@ -249,7 +255,7 @@ export default function ReportDetail() {
               <span>•</span>
               <span>
                 Dibuat:{" "}
-                {format(new Date(report.created_at), "PPP", {
+                {format(new Date(report.createdAt), "PPP", {
                   locale: idLocale,
                 })}
               </span>
@@ -281,12 +287,12 @@ export default function ReportDetail() {
                 </p>
               </div>
 
-              {report.status === "rejected" && report.rejection_reason && (
+              {report.status === "rejected" && report.rejectionReason && (
                 <div className="p-4 bg-status-rejected/5 rounded-md border border-status-rejected/20">
                   <h3 className="text-sm font-medium text-status-rejected mb-2">
                     Alasan Penolakan
                   </h3>
-                  <p>{report.rejection_reason}</p>
+                  <p>{report.rejectionReason}</p>
                 </div>
               )}
             </CardContent>

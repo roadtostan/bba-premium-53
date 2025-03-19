@@ -31,4 +31,6 @@ export {
   signInWithEmail,
   signOut,
   getCurrentUser,
+  approveReport,
+  rejectReport,
 } from "./db";

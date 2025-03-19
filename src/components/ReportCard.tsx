@@ -1,4 +1,3 @@
-
 import {
   Card,
   CardContent,
@@ -13,22 +12,23 @@ import { Clock, CheckCheck, X, FileText, Edit } from "lucide-react";
 import { Report, ReportStatus } from "@/types";
 import { useAuth } from "./AuthContext";
 import { Link } from "react-router-dom";
-import { canEditReport } from "@/lib/data";
+import { canEditReport, approveReport, rejectReport } from "@/lib/data";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import { toast } from "sonner";
+import { useState } from "react";
 
 interface ReportCardProps {
   report: Report;
-  onApprove?: (id: string) => void;
-  onReject?: (id: string) => void;
+  onUpdate?: (updatedReport: Report) => void;
 }
 
 export default function ReportCard({
   report,
-  onApprove,
-  onReject,
+  onUpdate,
 }: ReportCardProps) {
   const { user } = useAuth();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const getStatusBadge = (status: ReportStatus) => {
     switch (status) {
@@ -86,7 +86,6 @@ export default function ReportCard({
     }
   };
 
-  // Determine if the current user can take action on this report
   const canApprove =
     user &&
     ((user.role === "subdistrict_admin" &&
@@ -96,13 +95,69 @@ export default function ReportCard({
         report.status === "pending_city" &&
         report.cityName === user.city));
 
-  // Allow edit only for branch_user and super_admin roles
   const isEditable = user && 
     (user.role === "branch_user" || user.role === "super_admin") && 
     canEditReport(user.id, report.id);
 
-  // Calculate total sales value from income
   const totalSales = report.incomeInfo?.totalIncome ?? report.totalSales ?? 0;
+
+  const handleApprove = async () => {
+    setIsSubmitting(true);
+    try {
+      const updatedReportData = await approveReport(report.id, report.status);
+      
+      const newStatus = report.status === "pending_subdistrict" 
+        ? "pending_city" 
+        : "approved";
+      
+      const updatedReport = {
+        ...report,
+        status: newStatus
+      };
+      
+      if (onUpdate) {
+        onUpdate(updatedReport);
+      }
+      
+      if (report.status === "pending_subdistrict") {
+        toast.success(`Laporan disetujui dan dikirim ke Admin Kota`);
+      } else {
+        toast.success(`Laporan berhasil disetujui`);
+      }
+    } catch (error) {
+      console.error("Error approving report:", error);
+      toast.error("Gagal menyetujui laporan");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleReject = async () => {
+    const reason = prompt("Masukkan alasan penolakan:");
+    if (reason === null) return;
+    
+    setIsSubmitting(true);
+    try {
+      await rejectReport(report.id, reason || "Tidak ada alasan");
+      
+      const updatedReport = {
+        ...report,
+        status: "rejected",
+        rejectionReason: reason || "Tidak ada alasan"
+      };
+      
+      if (onUpdate) {
+        onUpdate(updatedReport);
+      }
+      
+      toast.info(`Laporan telah ditolak`);
+    } catch (error) {
+      console.error("Error rejecting report:", error);
+      toast.error("Gagal menolak laporan");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <Card
@@ -133,13 +188,13 @@ export default function ReportCard({
         <p className="text-sm text-gray-700 dark:text-gray-300 line-clamp-2">
           {report.content}
         </p>
-        {report.status === "rejected" && report.rejection_reason && (
+        {report.status === "rejected" && report.rejectionReason && (
           <div className="mt-2 p-2 bg-status-rejected/5 rounded-md border border-status-rejected/20">
             <p className="text-xs font-medium text-status-rejected">
               Alasan Penolakan:
             </p>
             <p className="text-xs text-gray-700 dark:text-gray-300">
-              {report.rejection_reason}
+              {report.rejectionReason}
             </p>
           </div>
         )}
@@ -169,12 +224,13 @@ export default function ReportCard({
               </Button>
             </Link>
           )}
-          {canApprove && onApprove && onReject && (
+          {canApprove && (
             <>
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => onReject(report.id)}
+                onClick={handleReject}
+                disabled={isSubmitting}
                 className="button-transition text-status-rejected border-status-rejected/20 hover:bg-status-rejected/10"
               >
                 Tolak
@@ -182,7 +238,8 @@ export default function ReportCard({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => onApprove(report.id)}
+                onClick={handleApprove}
+                disabled={isSubmitting}
                 className="button-transition text-status-approved border-status-approved/20 hover:bg-status-approved/10"
               >
                 Setujui

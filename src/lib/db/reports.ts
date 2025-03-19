@@ -334,6 +334,64 @@ export async function getPendingActionReports(userId: string) {
   }
 }
 
+// Function to approve a report
+export async function approveReport(reportId: string, currentStatus: ReportStatus) {
+  try {
+    // Determine the next status based on current status
+    let newStatus: ReportStatus;
+    
+    if (currentStatus === "pending_subdistrict") {
+      newStatus = "pending_city";
+    } else if (currentStatus === "pending_city") {
+      newStatus = "approved";
+    } else {
+      throw new Error("Report cannot be approved from its current status");
+    }
+
+    const { data, error } = await supabase
+      .from("reports")
+      .update({ status: newStatus })
+      .eq("id", reportId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Error approving report:", error);
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    console.error("Error in approveReport:", error);
+    throw error;
+  }
+}
+
+// Function to reject a report
+export async function rejectReport(reportId: string, reason: string) {
+  try {
+    const { data, error } = await supabase
+      .from("reports")
+      .update({ 
+        status: "rejected",
+        rejection_reason: reason 
+      })
+      .eq("id", reportId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Error rejecting report:", error);
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    console.error("Error in rejectReport:", error);
+    throw error;
+  }
+}
+
 // Fungsi untuk menambah komentar pada report
 export async function addReportComment(
   reportId: string,
