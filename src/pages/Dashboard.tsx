@@ -11,7 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FilePlus, FileCheck, FileX, Clock } from "lucide-react";
-import { Report } from "@/types";
+import { Report, ReportStatus } from "@/types";
 import { toast } from "sonner";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -170,8 +170,14 @@ export default function Dashboard() {
                   <ReportCard
                     key={report.id}
                     report={report}
-                    onApprove={handleApprove}
-                    onReject={handleReject}
+                    onUpdate={(updatedReport) => {
+                      setPendingActionReports(
+                        pendingActionReports.filter((r) => r.id !== updatedReport.id)
+                      );
+                      setReports(reports.map(r => 
+                        r.id === updatedReport.id ? updatedReport : r
+                      ));
+                    }}
                   />
                 ))}
               </div>
@@ -286,3 +292,4 @@ export default function Dashboard() {
     </div>
   );
 }
+

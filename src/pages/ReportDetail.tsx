@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/components/AuthContext";
@@ -15,7 +16,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
-import { Report, ReportComment, ReportStatus } from "@/types";
+import { Report, ReportStatus, ReportComment } from "@/types";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
@@ -255,7 +256,7 @@ export default function ReportDetail() {
               <span>•</span>
               <span>
                 Dibuat:{" "}
-                {format(new Date(report.createdAt), "PPP", {
+                {format(new Date(report.created_at), "PPP", {
                   locale: idLocale,
                 })}
               </span>
@@ -287,12 +288,12 @@ export default function ReportDetail() {
                 </p>
               </div>
 
-              {report.status === "rejected" && report.rejectionReason && (
+              {report.status === "rejected" && report.rejection_reason && (
                 <div className="p-4 bg-status-rejected/5 rounded-md border border-status-rejected/20">
                   <h3 className="text-sm font-medium text-status-rejected mb-2">
                     Alasan Penolakan
                   </h3>
-                  <p>{report.rejectionReason}</p>
+                  <p>{report.rejection_reason}</p>
                 </div>
               )}
             </CardContent>

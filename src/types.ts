@@ -40,6 +40,7 @@ export interface Report {
   cityName: string;
   branchManager: string;
   rejection_reason?: string;
+  createdBy?: string;
   comments?: ReportComment[];
   locationInfo: LocationInfo;
   productInfo: ProductInfo;

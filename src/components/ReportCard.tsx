@@ -1,3 +1,4 @@
+
 import {
   Card,
   CardContent,
@@ -21,11 +22,15 @@ import { useState } from "react";
 interface ReportCardProps {
   report: Report;
   onUpdate?: (updatedReport: Report) => void;
+  onApprove?: (reportId: string) => void;
+  onReject?: (reportId: string) => void;
 }
 
 export default function ReportCard({
   report,
   onUpdate,
+  onApprove,
+  onReject,
 }: ReportCardProps) {
   const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -106,7 +111,7 @@ export default function ReportCard({
     try {
       const updatedReportData = await approveReport(report.id, report.status);
       
-      const newStatus = report.status === "pending_subdistrict" 
+      const newStatus: ReportStatus = report.status === "pending_subdistrict" 
         ? "pending_city" 
         : "approved";
       
@@ -117,6 +122,10 @@ export default function ReportCard({
       
       if (onUpdate) {
         onUpdate(updatedReport);
+      }
+      
+      if (onApprove) {
+        onApprove(report.id);
       }
       
       if (report.status === "pending_subdistrict") {
@@ -142,12 +151,16 @@ export default function ReportCard({
       
       const updatedReport = {
         ...report,
-        status: "rejected",
-        rejectionReason: reason || "Tidak ada alasan"
+        status: "rejected" as ReportStatus,
+        rejection_reason: reason || "Tidak ada alasan"
       };
       
       if (onUpdate) {
         onUpdate(updatedReport);
+      }
+      
+      if (onReject) {
+        onReject(report.id);
       }
       
       toast.info(`Laporan telah ditolak`);
@@ -188,13 +201,13 @@ export default function ReportCard({
         <p className="text-sm text-gray-700 dark:text-gray-300 line-clamp-2">
           {report.content}
         </p>
-        {report.status === "rejected" && report.rejectionReason && (
+        {report.status === "rejected" && report.rejection_reason && (
           <div className="mt-2 p-2 bg-status-rejected/5 rounded-md border border-status-rejected/20">
             <p className="text-xs font-medium text-status-rejected">
               Alasan Penolakan:
             </p>
             <p className="text-xs text-gray-700 dark:text-gray-300">
-              {report.rejectionReason}
+              {report.rejection_reason}
             </p>
           </div>
         )}
