@@ -252,7 +252,7 @@ export async function addReportComment(
       id: comment.id,
       text: comment.text,
       user_id: comment.user_id,
-      user_name: comment.users.name,
+      user_name: comment.users?.name || "Unknown User", // Fixed: Access name property properly
       created_at: comment.created_at,
     };
   } catch (error) {
