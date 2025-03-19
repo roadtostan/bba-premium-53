@@ -101,6 +101,9 @@ export default function ReportCard({
     (user.role === "branch_user" || user.role === "super_admin") && 
     canEditReport(user.id, report.id);
 
+  // Calculate total sales value from income
+  const totalSales = report.incomeInfo?.totalIncome ?? report.totalSales ?? 0;
+
   return (
     <Card
       className={cn(
@@ -142,7 +145,7 @@ export default function ReportCard({
         )}
         <div className="mt-2">
           <p className="text-sm font-semibold">
-            Total Penjualan: Rp{report.totalSales?.toLocaleString() ?? 0}
+            Total Penjualan: Rp{totalSales.toLocaleString() ?? 0}
           </p>
         </div>
       </CardContent>

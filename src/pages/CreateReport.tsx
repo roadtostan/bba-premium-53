@@ -376,7 +376,7 @@ export default function CreateReport() {
         subdistrict_id: subdistrictId,
         city_id: cityId,
 
-        // Branch manager info - gunakan nama user, bukan ID
+        // Branch manager info - Use user ID for submission to database, but display name in UI
         branch_manager: user?.id || "",
 
         // Product information
@@ -540,7 +540,7 @@ export default function CreateReport() {
                   <Label htmlFor="branchManager">Penanggung Jawab Cabang</Label>
                   <Input
                     id="branchManager"
-                    value={locationInfo.branchManager}
+                    value={user?.name || ""}
                     readOnly
                     className="mt-1 bg-gray-100"
                   />
