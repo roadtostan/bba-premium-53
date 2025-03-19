@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/components/AuthContext";
 import NavBar from "@/components/NavBar";
-import { getReportById } from "@/lib/data";
+import { getReportById, addReportComment } from "@/lib/data";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -201,15 +201,7 @@ export default function ReportDetail() {
 
     setIsSubmitting(true);
     try {
-      await new Promise((resolve) => setTimeout(resolve, 800));
-
-      const newComment = {
-        id: `c${Date.now()}`,
-        text: comment,
-        user_id: user.id,
-        user_name: user.name,
-        created_at: new Date().toISOString(),
-      };
+      const newComment = await addReportComment(report.id, user.id, comment);
 
       const updatedReport = { ...report };
       updatedReport.comments = [...(updatedReport.comments || []), newComment];

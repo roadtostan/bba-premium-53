@@ -341,49 +341,37 @@ export async function addReportComment(
   text: string
 ) {
   try {
-    const { data: comment, error } = await supabase
+    // First insert the comment
+    const { data, error } = await supabase
       .from("comments")
       .insert({
         report_id: reportId,
         text,
         user_id: userId,
       })
-      .select(
-        `
-        id,
-        text,
-        user_id,
-        created_at,
-        users!comments_user_id_fkey (
-          name
-        )
-      `
-      )
+      .select("id, text, user_id, created_at")
       .single();
 
     if (error) throw error;
 
-    // Transform data structure to match expected format
-    // Fix: Handle type safety for the users object
-    let userName = "Unknown User";
+    // Then get the user data to include the name
+    const { data: userData, error: userError } = await supabase
+      .from("users")
+      .select("name")
+      .eq("id", userId)
+      .single();
 
-    if (comment.users) {
-      // Check if users is an array and has at least one element
-      if (Array.isArray(comment.users) && comment.users.length > 0) {
-        // Access the name from the first element if it exists
-        userName = comment.users[0]?.name || "Unknown User";
-      } else if (typeof comment.users === "object" && comment.users !== null) {
-        // If users is a single object, try to access name directly
-        userName = (comment.users as { name?: string }).name || "Unknown User";
-      }
+    if (userError) {
+      console.error("Error fetching user data:", userError);
     }
 
+    // Return the comment with user name
     return {
-      id: comment.id,
-      text: comment.text,
-      user_id: comment.user_id,
-      user_name: userName,
-      created_at: comment.created_at,
+      id: data.id,
+      text: data.text,
+      user_id: data.user_id,
+      user_name: userData?.name || "Unknown User",
+      created_at: data.created_at,
     };
   } catch (error) {
     console.error("Error adding comment:", error);
