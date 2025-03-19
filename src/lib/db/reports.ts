@@ -3,9 +3,11 @@ import type { Report, ReportStatus } from "@/types";
 
 // Fungsi helper untuk transformasi data
 function transformReportData(report: any): Report {
+  console.log("Raw report data:", report); // Tambahkan log untuk melihat data mentah
+
   return {
     ...report,
-    totalSales: report.total_sales || 0,
+    totalSales: Number(report.total_income) || 0, // Gunakan total_income sebagai totalSales
     branchName: report.branch_name,
     subdistrictName: report.subdistrict_name,
     cityName: report.city_name,
@@ -13,6 +15,36 @@ function transformReportData(report: any): Report {
     createdAt: report.created_at,
     updatedAt: report.updated_at,
     rejectionReason: report.rejection_reason,
+    productInfo: {
+      initialStock: Number(report.initial_stock) || 0,
+      remainingStock: Number(report.remaining_stock) || 0,
+      testers: Number(report.testers) || 0,
+      rejects: Number(report.rejects) || 0,
+      sold: Number(report.sold) || 0,
+    },
+    expenseInfo: {
+      employeeSalary: Number(report.employee_salary) || 0,
+      employeeBonus: Number(report.employee_bonus) || 0,
+      cookingOil: Number(report.cooking_oil) || 0,
+      lpgGas: Number(report.lpg_gas) || 0,
+      plasticBags: Number(report.plastic_bags) || 0,
+      tissue: Number(report.tissue) || 0,
+      soap: Number(report.soap) || 0,
+      otherExpenses: report.other_expenses || [],
+      totalExpenses: Number(report.total_expenses) || 0,
+    },
+    incomeInfo: {
+      cashReceipts: Number(report.cash_receipts) || 0,
+      transferReceipts: Number(report.transfer_receipts) || 0,
+      remainingIncome: Number(report.remaining_income) || 0,
+      totalIncome: Number(report.total_income) || 0,
+    },
+    locationInfo: {
+      cityName: report.city_name || "",
+      districtName: report.subdistrict_name || "",
+      branchName: report.branch_name || "",
+      branchManager: report.branch_manager || "",
+    },
   };
 }
 
@@ -83,6 +115,7 @@ export async function getReportById(reportId: string) {
       throw new Error("Report not found");
     }
 
+    console.log("Raw report data from RPC:", report);
     return transformReportData(report);
   } catch (error) {
     console.error("Error in getReportById:", error);
@@ -168,38 +201,48 @@ export async function canEditReport(
   }
 }
 
-export async function createReport(reportData: Partial<Report>) {
+export async function createReport(reportData: any) {
   try {
-    // Ensure we have a branchId, subdistrictId, and cityId
+    // Ensure we have required location IDs
     if (
-      !reportData.branchId ||
-      !reportData.subdistrictId ||
-      !reportData.cityId
+      !reportData.branch_id ||
+      !reportData.subdistrict_id ||
+      !reportData.city_id
     ) {
       throw new Error(
-        "Data lokasi tidak lengkap. Pastikan branchId, subdistrictId, dan cityId tersedia."
+        "Data lokasi tidak lengkap. Pastikan branch_id, subdistrict_id, dan city_id tersedia."
       );
     }
 
-    // Calculate total sales based on product information if not provided
-    const totalSales =
-      reportData.totalSales || reportData.productInfo?.sold || 0;
-
-    // Extract branch manager from locationInfo if available
-    const branchManager = reportData.locationInfo?.branchManager || "";
-
-    const reportWithSales = {
-      ...reportData,
-      totalSales: totalSales,
-      branch_manager: branchManager, // Map to the database column name
-      status: reportData.status || "draft",
-    };
-
-    const { data, error } = await supabase
-      .from("reports")
-      .insert(reportWithSales)
-      .select()
-      .single();
+    // Menggunakan RPC untuk menghindari masalah policy
+    const { data, error } = await supabase.rpc("create_report", {
+      p_title: reportData.title,
+      p_content: reportData.content,
+      p_date: reportData.date,
+      p_status: reportData.status,
+      p_branch_id: reportData.branch_id,
+      p_subdistrict_id: reportData.subdistrict_id,
+      p_city_id: reportData.city_id,
+      p_branch_manager: reportData.branch_manager,
+      p_initial_stock: reportData.initial_stock,
+      p_remaining_stock: reportData.remaining_stock,
+      p_testers: reportData.testers,
+      p_rejects: reportData.rejects,
+      p_sold: reportData.sold,
+      p_employee_salary: reportData.employee_salary,
+      p_employee_bonus: reportData.employee_bonus,
+      p_cooking_oil: reportData.cooking_oil,
+      p_lpg_gas: reportData.lpg_gas,
+      p_plastic_bags: reportData.plastic_bags,
+      p_tissue: reportData.tissue,
+      p_soap: reportData.soap,
+      p_other_expenses: reportData.other_expenses,
+      p_total_expenses: reportData.total_expenses,
+      p_cash_receipts: reportData.cash_receipts,
+      p_transfer_receipts: reportData.transfer_receipts,
+      p_total_income: reportData.total_income,
+      p_remaining_income: reportData.remaining_income,
+    });
 
     if (error) {
       console.error("Supabase error:", error);
@@ -213,19 +256,60 @@ export async function createReport(reportData: Partial<Report>) {
   }
 }
 
-export async function updateReport(
-  reportId: string,
-  reportData: Partial<Report>
-) {
-  const { data, error } = await supabase
-    .from("reports")
-    .update(reportData)
-    .eq("id", reportId)
-    .select()
-    .single();
+export async function updateReport(reportId: string, reportData: any) {
+  try {
+    // Ensure we have required location IDs
+    if (
+      !reportData.branch_id ||
+      !reportData.subdistrict_id ||
+      !reportData.city_id
+    ) {
+      throw new Error(
+        "Data lokasi tidak lengkap. Pastikan branch_id, subdistrict_id, dan city_id tersedia."
+      );
+    }
 
-  if (error) throw error;
-  return data;
+    // Menggunakan RPC untuk menghindari masalah policy
+    const { data, error } = await supabase.rpc("update_report", {
+      p_report_id: reportId,
+      p_title: reportData.title,
+      p_content: reportData.content,
+      p_date: reportData.date,
+      p_status: reportData.status,
+      p_branch_id: reportData.branch_id,
+      p_subdistrict_id: reportData.subdistrict_id,
+      p_city_id: reportData.city_id,
+      p_branch_manager: reportData.branch_manager,
+      p_initial_stock: reportData.initial_stock,
+      p_remaining_stock: reportData.remaining_stock,
+      p_testers: reportData.testers,
+      p_rejects: reportData.rejects,
+      p_sold: reportData.sold,
+      p_employee_salary: reportData.employee_salary,
+      p_employee_bonus: reportData.employee_bonus,
+      p_cooking_oil: reportData.cooking_oil,
+      p_lpg_gas: reportData.lpg_gas,
+      p_plastic_bags: reportData.plastic_bags,
+      p_tissue: reportData.tissue,
+      p_soap: reportData.soap,
+      p_other_expenses: reportData.other_expenses,
+      p_total_expenses: reportData.total_expenses,
+      p_cash_receipts: reportData.cash_receipts,
+      p_transfer_receipts: reportData.transfer_receipts,
+      p_total_income: reportData.total_income,
+      p_remaining_income: reportData.remaining_income,
+    });
+
+    if (error) {
+      console.error("Supabase error:", error);
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    console.error("Error updating report:", error);
+    throw error;
+  }
 }
 
 // Update fungsi getPendingActionReports untuk menggunakan RPC
