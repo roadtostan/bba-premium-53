@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "@/components/AuthContext";
@@ -26,7 +25,14 @@ import {
   ReportStatus,
   Report,
 } from "@/types";
-import { createReport, getBranches, getSubdistricts, getCities } from "@/lib/data";
+import {
+  createReport,
+  getBranches,
+  getSubdistricts,
+  getCities,
+  getReportById,
+  updateReport,
+} from "@/lib/data";
 import { id as idLocale } from "date-fns/locale";
 
 export default function CreateReport() {
@@ -41,7 +47,7 @@ export default function CreateReport() {
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDraft, setIsDraft] = useState(false);
-  
+
   // Branch, subdistrict, and city data
   const [branchId, setBranchId] = useState("");
   const [subdistrictId, setSubdistrictId] = useState("");
@@ -96,16 +102,18 @@ export default function CreateReport() {
         if (user && user.branch) {
           // Get branches to find the branch ID
           const branches = await getBranches();
-          const userBranch = branches.find(b => b.name === user.branch);
-          
+          const userBranch = branches.find((b) => b.name === user.branch);
+
           if (userBranch) {
             setBranchId(userBranch.id);
             setSubdistrictId(userBranch.subdistrict_id);
-            
+
             // Get subdistrict to find the city ID
             const subdistricts = await getSubdistricts();
-            const userSubdistrict = subdistricts.find(s => s.id === userBranch.subdistrict_id);
-            
+            const userSubdistrict = subdistricts.find(
+              (s) => s.id === userBranch.subdistrict_id
+            );
+
             if (userSubdistrict) {
               setCityId(userSubdistrict.city_id);
             }
@@ -116,9 +124,78 @@ export default function CreateReport() {
         toast.error("Gagal mengambil data lokasi");
       }
     };
-    
+
     fetchUserLocationData();
   }, [user]);
+
+  useEffect(() => {
+    const fetchReportData = async () => {
+      if (isEditMode && id) {
+        try {
+          const reportData = await getReportById(id);
+          console.log("Report data received:", reportData);
+
+          // Set form data from report
+          setTitle(reportData?.title ?? "Daily Sales Report");
+          setContent(reportData?.content ?? "");
+          setDate(reportData?.date ? new Date(reportData.date) : new Date());
+
+          // Set location info
+          setLocationInfo({
+            cityName: reportData?.cityName ?? user?.city ?? "",
+            districtName:
+              reportData?.subdistrictName ?? user?.subdistrict ?? "",
+            branchName: reportData?.branchName ?? user?.branch ?? "",
+            branchManager: reportData?.branchManager ?? user?.name ?? "",
+          });
+
+          // Set product info
+          setProductInfo({
+            initialStock: reportData?.productInfo?.initialStock ?? 0,
+            remainingStock: reportData?.productInfo?.remainingStock ?? 0,
+            testers: reportData?.productInfo?.testers ?? 0,
+            rejects: reportData?.productInfo?.rejects ?? 0,
+            sold: reportData?.productInfo?.sold ?? 0,
+          });
+
+          // Set expense info
+          setExpenseInfo({
+            employeeSalary: reportData?.expenseInfo?.employeeSalary ?? 0,
+            employeeBonus: reportData?.expenseInfo?.employeeBonus ?? 0,
+            cookingOil: reportData?.expenseInfo?.cookingOil ?? 0,
+            lpgGas: reportData?.expenseInfo?.lpgGas ?? 0,
+            plasticBags: reportData?.expenseInfo?.plasticBags ?? 0,
+            tissue: reportData?.expenseInfo?.tissue ?? 0,
+            soap: reportData?.expenseInfo?.soap ?? 0,
+            otherExpenses: reportData?.expenseInfo?.otherExpenses ?? [
+              { id: "1", description: "", amount: 0 },
+              { id: "2", description: "", amount: 0 },
+              { id: "3", description: "", amount: 0 },
+            ],
+            totalExpenses: reportData?.expenseInfo?.totalExpenses ?? 0,
+          });
+
+          // Set income info
+          setIncomeInfo({
+            cashReceipts: reportData?.incomeInfo?.cashReceipts ?? 0,
+            transferReceipts: reportData?.incomeInfo?.transferReceipts ?? 0,
+            remainingIncome: reportData?.incomeInfo?.remainingIncome ?? 0,
+            totalIncome: reportData?.incomeInfo?.totalIncome ?? 0,
+          });
+
+          // Set location IDs
+          setBranchId(reportData?.branchId ?? "");
+          setSubdistrictId(reportData?.subdistrictId ?? "");
+          setCityId(reportData?.cityId ?? "");
+        } catch (error) {
+          console.error("Error fetching report data:", error);
+          toast.error("Gagal mengambil data laporan");
+        }
+      }
+    };
+
+    fetchReportData();
+  }, [isEditMode, id, user]);
 
   useEffect(() => {
     // Calculate total expenses
@@ -246,12 +323,6 @@ export default function CreateReport() {
       return false;
     }
 
-    // Ensure we have branch, subdistrict, and city IDs
-    if (!branchId || !subdistrictId || !cityId) {
-      toast.error("Data lokasi tidak lengkap. Harap hubungi administrator.");
-      return false;
-    }
-
     return true;
   };
 
@@ -269,75 +340,94 @@ export default function CreateReport() {
     setIsSubmitting(true);
 
     try {
-      // Prepare report data with the correct structure matching our Report type
-      const reportData: Partial<Report> = {
+      // Pastikan kita memiliki branch_id dan subdistrict_id
+      if (!branchId || !subdistrictId || !cityId) {
+        // Jika belum ada, coba ambil dari data user
+        if (user?.branch) {
+          const branches = await getBranches();
+          const userBranch = branches.find((b) => b.name === user.branch);
+
+          if (userBranch) {
+            setBranchId(userBranch.id);
+            setSubdistrictId(userBranch.subdistrict_id);
+
+            // Get subdistrict to find the city ID
+            const subdistricts = await getSubdistricts();
+            const userSubdistrict = subdistricts.find(
+              (s) => s.id === userBranch.subdistrict_id
+            );
+
+            if (userSubdistrict) {
+              setCityId(userSubdistrict.city_id);
+            }
+          }
+        }
+      }
+
+      // Prepare report data with the correct structure matching database columns
+      const reportData = {
         title,
         content,
-        date: date?.toISOString().split('T')[0], // Format as YYYY-MM-DD
+        date: date?.toISOString().split("T")[0], // Format as YYYY-MM-DD
         status: (saveAsDraft ? "draft" : "pending_subdistrict") as ReportStatus,
 
-        // Location data with IDs for foreign keys
-        branchId: branchId,
-        subdistrictId: subdistrictId,
-        cityId: cityId,
-        
-        // Location info for display
-        branchName: locationInfo.branchName,
-        subdistrictName: locationInfo.districtName,
-        cityName: locationInfo.cityName,
-        branchManager: locationInfo.branchManager,
-        
-        // Include structured data blocks
-        locationInfo: {
-          cityName: locationInfo.cityName,
-          districtName: locationInfo.districtName,
-          branchName: locationInfo.branchName,
-          branchManager: locationInfo.branchManager,
-        },
-        
-        productInfo: {
-          initialStock: productInfo.initialStock,
-          remainingStock: productInfo.remainingStock,
-          testers: productInfo.testers,
-          rejects: productInfo.rejects,
-          sold: productInfo.sold,
-        },
-        
-        expenseInfo: {
-          employeeSalary: expenseInfo.employeeSalary,
-          employeeBonus: expenseInfo.employeeBonus,
-          cookingOil: expenseInfo.cookingOil,
-          lpgGas: expenseInfo.lpgGas,
-          plasticBags: expenseInfo.plasticBags,
-          tissue: expenseInfo.tissue,
-          soap: expenseInfo.soap,
-          otherExpenses: expenseInfo.otherExpenses,
-          totalExpenses: expenseInfo.totalExpenses,
-        },
-        
-        incomeInfo: {
-          cashReceipts: incomeInfo.cashReceipts,
-          transferReceipts: incomeInfo.transferReceipts,
-          totalIncome: incomeInfo.totalIncome,
-          remainingIncome: incomeInfo.remainingIncome,
-        },
-        
-        // Total sales (from product info)
-        totalSales: productInfo.sold,
+        // Location IDs - pastikan menggunakan nilai yang sudah diupdate
+        branch_id: branchId,
+        subdistrict_id: subdistrictId,
+        city_id: cityId,
+
+        // Branch manager info - gunakan nama user, bukan ID
+        branch_manager: user?.id || "",
+
+        // Product information
+        initial_stock: productInfo.initialStock,
+        remaining_stock: productInfo.remainingStock,
+        testers: productInfo.testers,
+        rejects: productInfo.rejects,
+        sold: productInfo.sold,
+
+        // Expense information
+        employee_salary: expenseInfo.employeeSalary,
+        employee_bonus: expenseInfo.employeeBonus,
+        cooking_oil: expenseInfo.cookingOil,
+        lpg_gas: expenseInfo.lpgGas,
+        plastic_bags: expenseInfo.plasticBags,
+        tissue: expenseInfo.tissue,
+        soap: expenseInfo.soap,
+        other_expenses: expenseInfo.otherExpenses,
+        total_expenses: expenseInfo.totalExpenses,
+
+        // Income information
+        cash_receipts: incomeInfo.cashReceipts,
+        transfer_receipts: incomeInfo.transferReceipts,
+        total_income: incomeInfo.totalIncome,
+        remaining_income: incomeInfo.remainingIncome,
       };
 
       console.log("Sending report data:", reportData);
-      await createReport(reportData);
 
-      toast.success(
-        saveAsDraft
-          ? "Laporan berhasil disimpan sebagai draft"
-          : "Laporan berhasil dikirim"
-      );
+      if (isEditMode && id) {
+        await updateReport(id, reportData);
+        toast.success(
+          saveAsDraft
+            ? "Laporan berhasil diperbarui sebagai draft"
+            : "Laporan berhasil diperbarui"
+        );
+      } else {
+        await createReport(reportData);
+        toast.success(
+          saveAsDraft
+            ? "Laporan berhasil disimpan sebagai draft"
+            : "Laporan berhasil dikirim"
+        );
+      }
+
       navigate("/");
     } catch (error) {
-      console.error("Error creating report:", error);
-      toast.error("Gagal membuat laporan: " + (error as Error).message);
+      console.error("Error creating/updating report:", error);
+      toast.error(
+        "Gagal membuat/memperbarui laporan: " + (error as Error).message
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -613,10 +703,7 @@ export default function CreateReport() {
                     min="0"
                     value={expenseInfo.plasticBags || ""}
                     onChange={(e) =>
-                      handleExpenseChange(
-                        "plasticBags",
-                        Number(e.target.value)
-                      )
+                      handleExpenseChange("plasticBags", Number(e.target.value))
                     }
                     placeholder="0"
                     className="mt-1"
@@ -725,10 +812,7 @@ export default function CreateReport() {
                     min="0"
                     value={incomeInfo.cashReceipts || ""}
                     onChange={(e) =>
-                      handleIncomeChange(
-                        "cashReceipts",
-                        Number(e.target.value)
-                      )
+                      handleIncomeChange("cashReceipts", Number(e.target.value))
                     }
                     placeholder="0"
                     className="mt-1"
