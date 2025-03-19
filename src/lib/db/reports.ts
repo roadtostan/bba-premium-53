@@ -248,11 +248,16 @@ export async function addReportComment(
     if (error) throw error;
 
     // Transform data structure to match expected format
+    // Fix: Handle the case where users might be an array by accessing the first element
+    const userName = Array.isArray(comment.users) 
+      ? (comment.users[0]?.name || "Unknown User") 
+      : (comment.users?.name || "Unknown User");
+
     return {
       id: comment.id,
       text: comment.text,
       user_id: comment.user_id,
-      user_name: comment.users?.name || "Unknown User", // Fixed: Access name property properly
+      user_name: userName,
       created_at: comment.created_at,
     };
   } catch (error) {
