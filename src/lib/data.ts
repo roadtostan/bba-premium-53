@@ -1,3 +1,4 @@
+
 export {
   getUsers,
   getUserById,
@@ -27,4 +28,7 @@ export {
   updateBranch,
   deleteBranch,
   testSupabaseConnection,
+  signInWithEmail,
+  signOut,
+  getCurrentUser,
 } from "./db";
