@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/components/AuthContext";
@@ -143,7 +142,7 @@ export default function Dashboard() {
           <div>
             <h1 className="text-3xl font-bold">{getRoleDashboardTitle()}</h1>
             <p className="text-muted-foreground">
-              Selamat datang kembali, {user.name}
+              Selamat datang lagi, {user.name}
             </p>
           </div>
           {user.role === "branch_user" && (
