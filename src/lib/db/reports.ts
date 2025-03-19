@@ -248,10 +248,19 @@ export async function addReportComment(
     if (error) throw error;
 
     // Transform data structure to match expected format
-    // Fix: Handle the case where users might be an array by accessing the first element
-    const userName = Array.isArray(comment.users) 
-      ? (comment.users[0]?.name || "Unknown User") 
-      : (comment.users?.name || "Unknown User");
+    // Fix: Handle type safety for the users object
+    let userName = "Unknown User";
+    
+    if (comment.users) {
+      // Check if users is an array and has at least one element
+      if (Array.isArray(comment.users) && comment.users.length > 0) {
+        // Access the name from the first element if it exists
+        userName = comment.users[0]?.name || "Unknown User";
+      } else if (typeof comment.users === 'object' && comment.users !== null) {
+        // If users is a single object, try to access name directly
+        userName = (comment.users as { name?: string }).name || "Unknown User";
+      }
+    }
 
     return {
       id: comment.id,
