@@ -42,7 +42,7 @@ export default function CreateReport() {
   const isEditMode = !!id;
 
   // Form state
-  const [title, setTitle] = useState("Daily Sales Report");
+  const [title, setTitle] = useState("Laporan Penjualan Harian");
   const [content, setContent] = useState("");
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -136,7 +136,7 @@ export default function CreateReport() {
           console.log("Report data received:", reportData);
 
           // Set form data from report
-          setTitle(reportData?.title ?? "Daily Sales Report");
+          setTitle(reportData?.title ?? "Laporan Penjualan Harian");
           setContent(reportData?.content ?? "");
           setDate(reportData?.date ? new Date(reportData.date) : new Date());
 
@@ -466,8 +466,10 @@ export default function CreateReport() {
                         variant="outline"
                         className={cn(
                           "w-full mt-1 justify-start text-left font-normal",
-                          !date && "text-muted-foreground"
+                          !date && "text-muted-foreground",
+                          isEditMode && "bg-gray-100 cursor-not-allowed"
                         )}
+                        disabled={isEditMode}
                       >
                         <CalendarIcon className="mr-2 h-4 w-4" />
                         {date ? (
@@ -477,16 +479,18 @@ export default function CreateReport() {
                         )}
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={date}
-                        onSelect={setDate}
-                        initialFocus
-                        locale={idLocale}
-                        className={cn("p-3 pointer-events-auto")}
-                      />
-                    </PopoverContent>
+                    {!isEditMode && (
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={date}
+                          onSelect={setDate}
+                          initialFocus
+                          locale={idLocale}
+                          className={cn("p-3 pointer-events-auto")}
+                        />
+                      </PopoverContent>
+                    )}
                   </Popover>
                 </div>
               </div>
@@ -872,7 +876,7 @@ export default function CreateReport() {
                 ) : (
                   <Save className="h-4 w-4" />
                 )}
-                Simpan sebagai Draft
+                Simpan Draf
               </Button>
 
               <Button

@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { useState } from "react";
+import RejectDialog from "./RejectDialog";
 
 interface ReportCardProps {
   report: Report;
@@ -33,6 +34,7 @@ export default function ReportCard({
 }: ReportCardProps) {
   const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
 
   const getStatusBadge = (status: ReportStatus) => {
     switch (status) {
@@ -107,18 +109,10 @@ export default function ReportCard({
   const handleApprove = async () => {
     setIsSubmitting(true);
     try {
-      // const updatedReportData = await approveReport(report.id, report.status);
-
-      const newStatus: ReportStatus =
-        report.status === "pending_subdistrict" ? "pending_city" : "approved";
-
-      const updatedReport = {
-        ...report,
-        status: newStatus,
-      };
+      const updatedReportData = await approveReport(report.id, report.status);
 
       if (onUpdate) {
-        onUpdate(updatedReport);
+        onUpdate(updatedReportData);
       }
 
       if (onApprove) {
@@ -138,22 +132,16 @@ export default function ReportCard({
     }
   };
 
-  const handleReject = async () => {
-    const reason = prompt("Masukkan alasan penolakan:");
-    if (reason === null) return;
-
+  const handleReject = async (reason: string) => {
     setIsSubmitting(true);
     try {
-      await rejectReport(report.id, reason || "Tidak ada alasan");
-
-      const updatedReport = {
-        ...report,
-        status: "rejected" as ReportStatus,
-        rejection_reason: reason || "Tidak ada alasan",
-      };
+      const updatedReportData = await rejectReport(
+        report.id,
+        reason || "Tidak ada alasan"
+      );
 
       if (onUpdate) {
-        onUpdate(updatedReport);
+        onUpdate(updatedReportData);
       }
 
       if (onReject) {
@@ -170,94 +158,102 @@ export default function ReportCard({
   };
 
   return (
-    <Card
-      className={cn(
-        "w-full card-transition",
-        "hover:shadow-md",
-        report.status === "rejected" && "border-status-rejected/20",
-        report.status === "approved" && "border-status-approved/20"
-      )}
-    >
-      <CardHeader className="pb-2">
-        <div className="flex justify-between items-start">
-          <div className="space-y-1">
-            <CardTitle className="text-lg">{report.title}</CardTitle>
-            <CardDescription>
-              {report.branchName} •{" "}
-              {format(new Date(report.date), "dd MMM yyyy")}
-            </CardDescription>
-          </div>
-          <div className="flex items-center gap-1">
-            {getStatusIcon(report.status)}
-            {getStatusBadge(report.status)}
-          </div>
-        </div>
-      </CardHeader>
-
-      <CardContent className="py-2">
-        <p className="text-sm text-gray-700 dark:text-gray-300 line-clamp-2">
-          {report.content}
-        </p>
-        {report.status === "rejected" && report.rejection_reason && (
-          <div className="mt-2 p-2 bg-status-rejected/5 rounded-md border border-status-rejected/20">
-            <p className="text-xs font-medium text-status-rejected">
-              Alasan Penolakan:
-            </p>
-            <p className="text-xs text-gray-700 dark:text-gray-300">
-              {report.rejection_reason}
-            </p>
-          </div>
+    <>
+      <Card
+        className={cn(
+          "w-full card-transition",
+          "hover:shadow-md",
+          report.status === "rejected" && "border-status-rejected/20",
+          report.status === "approved" && "border-status-approved/20"
         )}
-        <div className="mt-2">
-          <p className="text-sm font-semibold">
-            Total Penjualan: Rp{report.totalSales.toLocaleString()}
-          </p>
-        </div>
-      </CardContent>
+      >
+        <CardHeader className="pb-2">
+          <div className="flex justify-between items-start">
+            <div className="space-y-1">
+              <CardTitle className="text-lg">{report.title}</CardTitle>
+              <CardDescription>
+                {report.branchName} •{" "}
+                {format(new Date(report.date), "dd MMM yyyy")}
+              </CardDescription>
+            </div>
+            <div className="flex items-center gap-1">
+              {getStatusIcon(report.status)}
+              {getStatusBadge(report.status)}
+            </div>
+          </div>
+        </CardHeader>
 
-      <CardFooter className="pt-2 flex justify-between">
-        <Link to={`/report/${report.id}`}>
-          <Button variant="ghost" size="sm" className="button-transition">
-            Lihat Detail
-          </Button>
-        </Link>
-        <div className="flex gap-2">
-          {isEditable && (
-            <Link to={`/edit-report/${report.id}`}>
-              <Button
-                variant="outline"
-                size="sm"
-                className="button-transition flex items-center gap-1"
-              >
-                <Edit className="h-3 w-3" />
-                Edit
-              </Button>
-            </Link>
+        <CardContent className="py-2">
+          <p className="text-sm text-gray-700 dark:text-gray-300 line-clamp-2">
+            {report.content}
+          </p>
+          {report.status === "rejected" && report.rejection_reason && (
+            <div className="mt-2 p-2 bg-status-rejected/5 rounded-md border border-status-rejected/20">
+              <p className="text-xs font-medium text-status-rejected">
+                Alasan Penolakan:
+              </p>
+              <p className="text-xs text-gray-700 dark:text-gray-300">
+                {report.rejection_reason}
+              </p>
+            </div>
           )}
-          {canApprove && (
-            <>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleReject}
-                disabled={isSubmitting}
-                className="button-transition text-status-rejected border-status-rejected/20 hover:bg-status-rejected/10"
-              >
-                Tolak
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleApprove}
-                disabled={isSubmitting}
-                className="button-transition text-status-approved border-status-approved/20 hover:bg-status-approved/10"
-              >
-                Setujui
-              </Button>
-            </>
-          )}
-        </div>
-      </CardFooter>
-    </Card>
+          <div className="mt-2">
+            <p className="text-sm font-semibold">
+              Total Penjualan: Rp{report.total_sales.toLocaleString()}
+            </p>
+          </div>
+        </CardContent>
+
+        <CardFooter className="pt-2 flex justify-between">
+          <Link to={`/report/${report.id}`}>
+            <Button variant="ghost" size="sm" className="button-transition">
+              Lihat Detail
+            </Button>
+          </Link>
+          <div className="flex gap-2">
+            {isEditable && (
+              <Link to={`/edit-report/${report.id}`}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="button-transition flex items-center gap-1"
+                >
+                  <Edit className="h-3 w-3" />
+                  Edit
+                </Button>
+              </Link>
+            )}
+            {canApprove && (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsRejectDialogOpen(true)}
+                  disabled={isSubmitting}
+                  className="button-transition text-status-rejected border-status-rejected/20 hover:bg-status-rejected/10"
+                >
+                  Tolak
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleApprove}
+                  disabled={isSubmitting}
+                  className="button-transition text-status-approved border-status-approved/20 hover:bg-status-approved/10"
+                >
+                  Setujui
+                </Button>
+              </>
+            )}
+          </div>
+        </CardFooter>
+      </Card>
+
+      <RejectDialog
+        isOpen={isRejectDialogOpen}
+        onClose={() => setIsRejectDialogOpen(false)}
+        onSubmit={handleReject}
+      />
+    </>
   );
 }

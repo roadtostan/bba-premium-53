@@ -35,12 +35,14 @@ import {
   FileEdit,
   Loader2,
 } from "lucide-react";
+import RejectDialog from "@/components/RejectDialog";
 
 export default function ReportDetail() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [report, setReport] = useState<Report | null>(null);
+  const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
 
   useEffect(() => {
     async function loadReport() {
@@ -178,10 +180,7 @@ export default function ReportDetail() {
     }
   };
 
-  const handleReject = async () => {
-    const reason = prompt("Masukkan alasan penolakan:");
-    if (reason === null) return;
-
+  const handleReject = async (reason: string) => {
     setIsSubmitting(true);
     try {
       await rejectReport(report.id, reason || "Tidak ada alasan");
@@ -331,7 +330,7 @@ export default function ReportDetail() {
                 <>
                   <Button
                     variant="outline"
-                    onClick={handleReject}
+                    onClick={() => setIsRejectDialogOpen(true)}
                     disabled={isSubmitting}
                     className="button-transition text-status-rejected border-status-rejected/20 hover:bg-status-rejected/10"
                   >
@@ -419,6 +418,12 @@ export default function ReportDetail() {
           </div>
         </div>
       </main>
+
+      <RejectDialog
+        isOpen={isRejectDialogOpen}
+        onClose={() => setIsRejectDialogOpen(false)}
+        onSubmit={handleReject}
+      />
     </div>
   );
 }

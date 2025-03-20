@@ -376,12 +376,11 @@ export async function approveReport(
       throw new Error("Report cannot be approved from its current status");
     }
 
-    const { data, error } = await supabase
-      .from("reports")
-      .update({ status: newStatus })
-      .eq("id", reportId)
-      .select()
-      .single();
+    // Menggunakan RPC untuk menghindari masalah policy
+    const { data, error } = await supabase.rpc("approve_report", {
+      p_report_id: reportId,
+      p_new_status: newStatus,
+    });
 
     if (error) {
       console.error("Error approving report:", error);
@@ -398,22 +397,19 @@ export async function approveReport(
 // Function to reject a report
 export async function rejectReport(reportId: string, reason: string) {
   try {
-    const { data, error } = await supabase
-      .from("reports")
-      .update({
-        status: "rejected",
-        rejection_reason: reason,
-      })
-      .eq("id", reportId)
-      .select()
-      .single();
+    // Menggunakan RPC untuk menghindari masalah policy
+    const { data, error } = await supabase.rpc("reject_report", {
+      p_report_id: reportId,
+      p_rejection_reason: reason,
+    });
 
     if (error) {
       console.error("Error rejecting report:", error);
       throw error;
     }
 
-    return data;
+    // Transform data sebelum dikembalikan
+    return transformReportData(data);
   } catch (error) {
     console.error("Error in rejectReport:", error);
     throw error;
