@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/components/AuthContext";
@@ -21,6 +22,14 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Report, ReportStatus, ReportComment } from "@/types";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -34,6 +43,10 @@ import {
   Send,
   FileEdit,
   Loader2,
+  MapPin,
+  Package,
+  Receipt,
+  DollarSign,
 } from "lucide-react";
 import RejectDialog from "@/components/RejectDialog";
 
@@ -190,7 +203,7 @@ export default function ReportDetail() {
         return {
           ...prev,
           status: "rejected",
-          rejectionReason: reason || "Tidak ada alasan",
+          rejection_reason: reason || "Tidak ada alasan",
         };
       });
 
@@ -236,6 +249,10 @@ export default function ReportDetail() {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const formatCurrency = (value: number) => {
+    return `Rp${value.toLocaleString()}`;
   };
 
   return (
@@ -294,13 +311,168 @@ export default function ReportDetail() {
                 <p className="whitespace-pre-line">{report.content}</p>
               </div>
 
+              {/* Location Information */}
               <div>
-                <h3 className="text-sm font-medium text-muted-foreground mb-2">
-                  Total Penjualan
+                <h3 className="text-base font-medium flex items-center gap-2 mb-3 pt-2">
+                  <MapPin className="h-5 w-5" />
+                  Informasi Lokasi
                 </h3>
-                <p className="text-xl font-bold">
-                  Rp{report.totalSales.toLocaleString() ?? 0}
-                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Kota:</span>
+                      <span className="font-medium">{report.locationInfo.cityName}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Wilayah:</span>
+                      <span className="font-medium">{report.locationInfo.districtName}</span>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Cabang:</span>
+                      <span className="font-medium">{report.locationInfo.branchName}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Manajer Cabang:</span>
+                      <span className="font-medium">{report.locationInfo.branchManager}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Product Information */}
+              <div>
+                <h3 className="text-base font-medium flex items-center gap-2 mb-3 pt-2">
+                  <Package className="h-5 w-5" />
+                  Informasi Produk
+                </h3>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Deskripsi</TableHead>
+                      <TableHead className="text-right">Jumlah</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    <TableRow>
+                      <TableCell>Stok Awal</TableCell>
+                      <TableCell className="text-right">{report.productInfo.initialStock}</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell>Sisa Stok</TableCell>
+                      <TableCell className="text-right">{report.productInfo.remainingStock}</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell>Tester</TableCell>
+                      <TableCell className="text-right">{report.productInfo.testers}</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell>Reject</TableCell>
+                      <TableCell className="text-right">{report.productInfo.rejects}</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell className="font-medium">Terjual</TableCell>
+                      <TableCell className="text-right font-medium">{report.productInfo.sold}</TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Expense Information */}
+              <div>
+                <h3 className="text-base font-medium flex items-center gap-2 mb-3 pt-2">
+                  <Receipt className="h-5 w-5" />
+                  Informasi Pengeluaran
+                </h3>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Deskripsi</TableHead>
+                      <TableHead className="text-right">Jumlah</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    <TableRow>
+                      <TableCell>Gaji Karyawan</TableCell>
+                      <TableCell className="text-right">{formatCurrency(report.expenseInfo.employeeSalary)}</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell>Bonus Karyawan</TableCell>
+                      <TableCell className="text-right">{formatCurrency(report.expenseInfo.employeeBonus)}</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell>Minyak Goreng</TableCell>
+                      <TableCell className="text-right">{formatCurrency(report.expenseInfo.cookingOil)}</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell>Gas LPG</TableCell>
+                      <TableCell className="text-right">{formatCurrency(report.expenseInfo.lpgGas)}</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell>Kantong Plastik</TableCell>
+                      <TableCell className="text-right">{formatCurrency(report.expenseInfo.plasticBags)}</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell>Tissue</TableCell>
+                      <TableCell className="text-right">{formatCurrency(report.expenseInfo.tissue)}</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell>Sabun</TableCell>
+                      <TableCell className="text-right">{formatCurrency(report.expenseInfo.soap)}</TableCell>
+                    </TableRow>
+                    
+                    {report.expenseInfo.otherExpenses && report.expenseInfo.otherExpenses.length > 0 && (
+                      <>
+                        {report.expenseInfo.otherExpenses.map((expense) => (
+                          <TableRow key={expense.id}>
+                            <TableCell>{expense.description}</TableCell>
+                            <TableCell className="text-right">{formatCurrency(expense.amount)}</TableCell>
+                          </TableRow>
+                        ))}
+                      </>
+                    )}
+                    
+                    <TableRow>
+                      <TableCell className="font-medium">Total Pengeluaran</TableCell>
+                      <TableCell className="text-right font-medium">{formatCurrency(report.expenseInfo.totalExpenses)}</TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Income Information */}
+              <div>
+                <h3 className="text-base font-medium flex items-center gap-2 mb-3 pt-2">
+                  <DollarSign className="h-5 w-5" />
+                  Informasi Pendapatan
+                </h3>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Deskripsi</TableHead>
+                      <TableHead className="text-right">Jumlah</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    <TableRow>
+                      <TableCell>Penerimaan Tunai</TableCell>
+                      <TableCell className="text-right">{formatCurrency(report.incomeInfo.cashReceipts)}</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell>Penerimaan Transfer</TableCell>
+                      <TableCell className="text-right">{formatCurrency(report.incomeInfo.transferReceipts)}</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell>Sisa Penghasilan</TableCell>
+                      <TableCell className="text-right">{formatCurrency(report.incomeInfo.remainingIncome)}</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell className="font-medium">Total Pendapatan</TableCell>
+                      <TableCell className="text-right font-medium">{formatCurrency(report.incomeInfo.totalIncome)}</TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
               </div>
 
               {report.status === "rejected" && report.rejection_reason && (
