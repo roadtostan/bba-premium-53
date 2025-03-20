@@ -32,7 +32,24 @@ export default function Dashboard() {
           getReportsByUser(user.id),
           getPendingActionReports(user.id),
         ]);
-        setReports(reportsData);
+        
+        let filteredReports = reportsData;
+        
+        if (user.role === "subdistrict_admin") {
+          filteredReports = reportsData.filter(
+            (report) => report.status !== "draft"
+          );
+        }
+        
+        if (user.role === "city_admin") {
+          filteredReports = reportsData.filter(
+            (report) => 
+              report.status !== "draft" && 
+              report.status !== "pending_subdistrict"
+          );
+        }
+        
+        setReports(filteredReports);
         setPendingActionReports(pendingData);
       }
     }
@@ -178,6 +195,8 @@ export default function Dashboard() {
                         r.id === updatedReport.id ? updatedReport : r
                       ));
                     }}
+                    onApprove={handleApprove}
+                    onReject={handleReject}
                   />
                 ))}
               </div>
@@ -256,7 +275,12 @@ export default function Dashboard() {
               ) : (
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                   {filteredReports().map((report) => (
-                    <ReportCard key={report.id} report={report} />
+                    <ReportCard 
+                      key={report.id} 
+                      report={report}
+                      onApprove={handleApprove}
+                      onReject={handleReject}
+                    />
                   ))}
                 </div>
               )}
@@ -280,7 +304,12 @@ export default function Dashboard() {
                 ) : (
                   <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                     {filteredReports().map((report) => (
-                      <ReportCard key={report.id} report={report} />
+                      <ReportCard 
+                        key={report.id} 
+                        report={report}
+                        onApprove={handleApprove}
+                        onReject={handleReject}
+                      />
                     ))}
                   </div>
                 )}
@@ -292,4 +321,3 @@ export default function Dashboard() {
     </div>
   );
 }
-

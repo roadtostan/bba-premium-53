@@ -210,7 +210,7 @@ export default function ReportCard({
         )}
         <div className="mt-2">
           <p className="text-sm font-semibold">
-            Total Penjualan: Rp{report.total_sales.toLocaleString()}
+            Total Penjualan: Rp{report.totalSales.toLocaleString()}
           </p>
         </div>
       </CardContent>
