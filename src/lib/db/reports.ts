@@ -102,21 +102,44 @@ export async function getReports(filters?: {
 // Fungsi untuk mendapatkan single report by ID
 export async function getReportById(reportId: string) {
   try {
-    const { data: report, error } = await supabase.rpc("get_report_detail", {
-      p_report_id: reportId,
-    });
+    // Get report data from RPC
+    const { data: report, error: reportError } = await supabase.rpc(
+      "get_report_detail",
+      {
+        p_report_id: reportId,
+      }
+    );
 
-    if (error) {
-      console.error("Error fetching report detail:", error);
-      throw error;
+    if (reportError) {
+      console.error("Error fetching report detail:", reportError);
+      throw reportError;
     }
 
     if (!report) {
       throw new Error("Report not found");
     }
 
-    console.log("Raw report data from RPC:", report);
-    return transformReportData(report);
+    // Get comments using RPC to avoid infinite recursion
+    const { data: comments, error: commentsError } = await supabase.rpc(
+      "get_report_comments",
+      {
+        p_report_id: reportId,
+      }
+    );
+
+    if (commentsError) {
+      console.error("Error fetching comments:", commentsError);
+      throw commentsError;
+    }
+
+    // Transform report data and include comments
+    const transformedReport = transformReportData({
+      ...report,
+      comments: comments || [],
+    });
+
+    console.log("Transformed report with comments:", transformedReport);
+    return transformedReport;
   } catch (error) {
     console.error("Error in getReportById:", error);
     throw error;
@@ -134,6 +157,7 @@ export async function getReportsByUser(userId: string) {
       throw error;
     }
 
+    console.log("Raw user reports data:", reports); // Tambahkan log ini
     return (reports || []).map(transformReportData);
   } catch (error) {
     console.error("Error in getReportsByUser:", error);
@@ -327,6 +351,7 @@ export async function getPendingActionReports(userId: string) {
       return [];
     }
 
+    console.log("Raw pending reports data:", reports); // Tambahkan log ini
     return (reports || []).map(transformReportData);
   } catch (error) {
     console.error("Error in getPendingActionReports:", error);
@@ -335,11 +360,14 @@ export async function getPendingActionReports(userId: string) {
 }
 
 // Function to approve a report
-export async function approveReport(reportId: string, currentStatus: ReportStatus) {
+export async function approveReport(
+  reportId: string,
+  currentStatus: ReportStatus
+) {
   try {
     // Determine the next status based on current status
     let newStatus: ReportStatus;
-    
+
     if (currentStatus === "pending_subdistrict") {
       newStatus = "pending_city";
     } else if (currentStatus === "pending_city") {
@@ -372,9 +400,9 @@ export async function rejectReport(reportId: string, reason: string) {
   try {
     const { data, error } = await supabase
       .from("reports")
-      .update({ 
+      .update({
         status: "rejected",
-        rejection_reason: reason 
+        rejection_reason: reason,
       })
       .eq("id", reportId)
       .select()
@@ -399,40 +427,26 @@ export async function addReportComment(
   text: string
 ) {
   try {
-    // First insert the comment
-    const { data, error } = await supabase
-      .from("comments")
-      .insert({
-        report_id: reportId,
-        text,
-        user_id: userId,
-      })
-      .select("id, text, user_id, created_at")
-      .single();
+    const { data: comment, error } = await supabase.rpc("add_report_comment", {
+      p_report_id: reportId,
+      p_user_id: userId,
+      p_text: text,
+    });
 
-    if (error) throw error;
-
-    // Then get the user data to include the name
-    const { data: userData, error: userError } = await supabase
-      .from("users")
-      .select("name")
-      .eq("id", userId)
-      .single();
-
-    if (userError) {
-      console.error("Error fetching user data:", userError);
+    if (error) {
+      console.error("Error adding comment:", error);
+      throw error;
     }
 
-    // Return the comment with user name
     return {
-      id: data.id,
-      text: data.text,
-      user_id: data.user_id,
-      user_name: userData?.name || "Unknown User",
-      created_at: data.created_at,
+      id: comment.comment_id,
+      text: comment.text,
+      user_id: comment.user_id,
+      user_name: comment.user_name || "Unknown User",
+      created_at: comment.created_at,
     };
   } catch (error) {
-    console.error("Error adding comment:", error);
+    console.error("Error in addReportComment:", error);
     throw error;
   }
 }

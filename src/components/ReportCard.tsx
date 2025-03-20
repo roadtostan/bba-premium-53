@@ -1,4 +1,3 @@
-
 import {
   Card,
   CardContent,
@@ -100,34 +99,32 @@ export default function ReportCard({
         report.status === "pending_city" &&
         report.cityName === user.city));
 
-  const isEditable = user && 
-    (user.role === "branch_user" || user.role === "super_admin") && 
+  const isEditable =
+    user &&
+    (user.role === "branch_user" || user.role === "super_admin") &&
     canEditReport(user.id, report.id);
-
-  const totalSales = report.incomeInfo?.totalIncome ?? report.totalSales ?? 0;
 
   const handleApprove = async () => {
     setIsSubmitting(true);
     try {
-      const updatedReportData = await approveReport(report.id, report.status);
-      
-      const newStatus: ReportStatus = report.status === "pending_subdistrict" 
-        ? "pending_city" 
-        : "approved";
-      
+      // const updatedReportData = await approveReport(report.id, report.status);
+
+      const newStatus: ReportStatus =
+        report.status === "pending_subdistrict" ? "pending_city" : "approved";
+
       const updatedReport = {
         ...report,
-        status: newStatus
+        status: newStatus,
       };
-      
+
       if (onUpdate) {
         onUpdate(updatedReport);
       }
-      
+
       if (onApprove) {
         onApprove(report.id);
       }
-      
+
       if (report.status === "pending_subdistrict") {
         toast.success(`Laporan disetujui dan dikirim ke Admin Kota`);
       } else {
@@ -144,25 +141,25 @@ export default function ReportCard({
   const handleReject = async () => {
     const reason = prompt("Masukkan alasan penolakan:");
     if (reason === null) return;
-    
+
     setIsSubmitting(true);
     try {
       await rejectReport(report.id, reason || "Tidak ada alasan");
-      
+
       const updatedReport = {
         ...report,
         status: "rejected" as ReportStatus,
-        rejection_reason: reason || "Tidak ada alasan"
+        rejection_reason: reason || "Tidak ada alasan",
       };
-      
+
       if (onUpdate) {
         onUpdate(updatedReport);
       }
-      
+
       if (onReject) {
         onReject(report.id);
       }
-      
+
       toast.info(`Laporan telah ditolak`);
     } catch (error) {
       console.error("Error rejecting report:", error);
@@ -196,7 +193,7 @@ export default function ReportCard({
           </div>
         </div>
       </CardHeader>
-      
+
       <CardContent className="py-2">
         <p className="text-sm text-gray-700 dark:text-gray-300 line-clamp-2">
           {report.content}
@@ -213,11 +210,11 @@ export default function ReportCard({
         )}
         <div className="mt-2">
           <p className="text-sm font-semibold">
-            Total Penjualan: Rp{totalSales.toLocaleString() ?? 0}
+            Total Penjualan: Rp{report.total_sales.toLocaleString()}
           </p>
         </div>
       </CardContent>
-      
+
       <CardFooter className="pt-2 flex justify-between">
         <Link to={`/report/${report.id}`}>
           <Button variant="ghost" size="sm" className="button-transition">

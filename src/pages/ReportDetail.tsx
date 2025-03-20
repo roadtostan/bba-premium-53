@@ -1,9 +1,14 @@
-
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/components/AuthContext";
 import NavBar from "@/components/NavBar";
-import { getReportById, addReportComment, approveReport, rejectReport, canEditReport } from "@/lib/data";
+import {
+  getReportById,
+  addReportComment,
+  approveReport,
+  rejectReport,
+  canEditReport,
+} from "@/lib/data";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -28,6 +33,7 @@ import {
   MessageSquare,
   Send,
   FileEdit,
+  Loader2,
 } from "lucide-react";
 
 export default function ReportDetail() {
@@ -146,20 +152,19 @@ export default function ReportDetail() {
     setIsSubmitting(true);
     try {
       const updatedReportData = await approveReport(report.id, report.status);
-      
-      setReport(prev => {
+
+      setReport((prev) => {
         if (!prev) return null;
-        
-        const newStatus = prev.status === "pending_subdistrict" 
-          ? "pending_city" 
-          : "approved";
-          
+
+        const newStatus =
+          prev.status === "pending_subdistrict" ? "pending_city" : "approved";
+
         return {
           ...prev,
-          status: newStatus
+          status: newStatus,
         };
       });
-      
+
       if (report.status === "pending_subdistrict") {
         toast.success(`Laporan disetujui dan dikirim ke Admin Kota`);
       } else {
@@ -176,20 +181,20 @@ export default function ReportDetail() {
   const handleReject = async () => {
     const reason = prompt("Masukkan alasan penolakan:");
     if (reason === null) return;
-    
+
     setIsSubmitting(true);
     try {
       await rejectReport(report.id, reason || "Tidak ada alasan");
-      
-      setReport(prev => {
+
+      setReport((prev) => {
         if (!prev) return null;
         return {
           ...prev,
           status: "rejected",
-          rejectionReason: reason || "Tidak ada alasan"
+          rejectionReason: reason || "Tidak ada alasan",
         };
       });
-      
+
       toast.info(`Laporan telah ditolak`);
     } catch (error) {
       console.error("Error rejecting report:", error);
@@ -210,10 +215,21 @@ export default function ReportDetail() {
     try {
       const newComment = await addReportComment(report.id, user.id, comment);
 
-      const updatedReport = { ...report };
-      updatedReport.comments = [...(updatedReport.comments || []), newComment];
+      setReport((prevReport) => {
+        if (!prevReport) return null;
+        return {
+          ...prevReport,
+          comments: [
+            ...(prevReport.comments || []),
+            {
+              ...newComment,
+              user_name: user.name,
+              created_at: new Date().toISOString(),
+            },
+          ],
+        };
+      });
 
-      setReport(updatedReport);
       setComment("");
       toast.success("Komentar ditambahkan");
     } catch (error) {
@@ -284,7 +300,7 @@ export default function ReportDetail() {
                   Total Penjualan
                 </h3>
                 <p className="text-xl font-bold">
-                  Rp{(report.totalSales || 0).toLocaleString()}
+                  Rp{report.totalSales.toLocaleString() ?? 0}
                 </p>
               </div>
 
@@ -355,14 +371,20 @@ export default function ReportDetail() {
                     className="p-4 glass-panel rounded-lg border"
                   >
                     <div className="flex justify-between items-start">
-                      <h3 className="font-medium">{comment.user_name}</h3>
-                      <span className="text-xs text-muted-foreground">
-                        {format(new Date(comment.created_at), "PPP", {
-                          locale: idLocale,
-                        })}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-medium">{comment.user_name}</h3>
+                        <span className="text-xs text-muted-foreground">
+                          {comment.created_at
+                            ? format(new Date(comment.created_at), "PPP", {
+                                locale: idLocale,
+                              })
+                            : "Tanggal tidak tersedia"}
+                        </span>
+                      </div>
                     </div>
-                    <p className="mt-2 text-sm">{comment.text}</p>
+                    <p className="mt-2 text-sm whitespace-pre-wrap">
+                      {comment.text}
+                    </p>
                   </div>
                 ))
               )}
@@ -377,7 +399,7 @@ export default function ReportDetail() {
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
                 placeholder="Tulis komentar Anda di sini..."
-                className="mb-3"
+                className="mb-3 min-h-[100px]"
               />
               <div className="flex justify-end">
                 <Button
@@ -385,7 +407,11 @@ export default function ReportDetail() {
                   disabled={isSubmitting || !comment.trim()}
                   className="button-transition flex items-center gap-2"
                 >
-                  <Send className="h-4 w-4" />
+                  {isSubmitting ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Send className="h-4 w-4" />
+                  )}
                   Kirim Komentar
                 </Button>
               </div>
