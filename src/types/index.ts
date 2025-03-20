@@ -1,7 +1,15 @@
+export type UserRole =
+  | "branch_user"
+  | "subdistrict_admin"
+  | "city_admin"
+  | "super_admin";
 
-export type UserRole = "branch_user" | "subdistrict_admin" | "city_admin" | "super_admin";
-
-export type ReportStatus = "draft" | "pending_subdistrict" | "pending_city" | "approved" | "rejected";
+export type ReportStatus =
+  | "draft"
+  | "pending_subdistrict"
+  | "pending_city"
+  | "approved"
+  | "rejected";
 
 export interface User {
   id: string;
@@ -41,9 +49,10 @@ export interface Report {
 export interface Comment {
   id: string;
   text: string;
-  userId: string;
-  userName: string;
-  timestamp: string;
+  user_id: string;
+  user_name: string;
+  created_at: string;
+  key?: string;
 }
 
 export interface LocationInfo {
