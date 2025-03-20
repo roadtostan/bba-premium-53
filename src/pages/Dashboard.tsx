@@ -15,6 +15,7 @@ import { Report, ReportStatus } from "@/types";
 import { toast } from "sonner";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useIsMobile } from "@/hooks/use-mobile";
+import RejectDialog from "@/components/RejectDialog";
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -23,6 +24,8 @@ export default function Dashboard() {
   const [pendingActionReports, setPendingActionReports] = useState<Report[]>(
     []
   );
+  const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
+  const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
   const isMobile = useIsMobile();
 
   useEffect(() => {
@@ -32,23 +35,23 @@ export default function Dashboard() {
           getReportsByUser(user.id),
           getPendingActionReports(user.id),
         ]);
-        
+
         let filteredReports = reportsData;
-        
+
         if (user.role === "subdistrict_admin") {
           filteredReports = reportsData.filter(
             (report) => report.status !== "draft"
           );
         }
-        
+
         if (user.role === "city_admin") {
           filteredReports = reportsData.filter(
-            (report) => 
-              report.status !== "draft" && 
+            (report) =>
+              report.status !== "draft" &&
               report.status !== "pending_subdistrict"
           );
         }
-        
+
         setReports(filteredReports);
         setPendingActionReports(pendingData);
       }
@@ -116,24 +119,30 @@ export default function Dashboard() {
   };
 
   const handleReject = (reportId: string) => {
-    const reason = prompt("Please enter a reason for rejection:");
-    if (reason === null) return;
+    setSelectedReportId(reportId);
+    setIsRejectDialogOpen(true);
+  };
+
+  const handleRejectSubmit = (reason: string) => {
+    if (!selectedReportId) return;
 
     const updatedReports = [...reports];
-    const reportIndex = updatedReports.findIndex((r) => r.id === reportId);
+    const reportIndex = updatedReports.findIndex(
+      (r) => r.id === selectedReportId
+    );
 
     if (reportIndex !== -1) {
       updatedReports[reportIndex].status = "rejected";
       updatedReports[reportIndex].rejection_reason =
-        reason || "No reason provided";
+        reason || "Tidak ada alasan";
 
       setReports(updatedReports);
       setPendingActionReports(
-        pendingActionReports.filter((r) => r.id !== reportId)
+        pendingActionReports.filter((r) => r.id !== selectedReportId)
       );
 
       toast.info(
-        `Report "${updatedReports[reportIndex].title}" has been rejected`
+        `Laporan "${updatedReports[reportIndex].title}" telah ditolak`
       );
     }
   };
@@ -189,11 +198,15 @@ export default function Dashboard() {
                     report={report}
                     onUpdate={(updatedReport) => {
                       setPendingActionReports(
-                        pendingActionReports.filter((r) => r.id !== updatedReport.id)
+                        pendingActionReports.filter(
+                          (r) => r.id !== updatedReport.id
+                        )
                       );
-                      setReports(reports.map(r => 
-                        r.id === updatedReport.id ? updatedReport : r
-                      ));
+                      setReports(
+                        reports.map((r) =>
+                          r.id === updatedReport.id ? updatedReport : r
+                        )
+                      );
                     }}
                     onApprove={handleApprove}
                     onReject={handleReject}
@@ -275,8 +288,8 @@ export default function Dashboard() {
               ) : (
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                   {filteredReports().map((report) => (
-                    <ReportCard 
-                      key={report.id} 
+                    <ReportCard
+                      key={report.id}
                       report={report}
                       onApprove={handleApprove}
                       onReject={handleReject}
@@ -304,8 +317,8 @@ export default function Dashboard() {
                 ) : (
                   <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                     {filteredReports().map((report) => (
-                      <ReportCard 
-                        key={report.id} 
+                      <ReportCard
+                        key={report.id}
                         report={report}
                         onApprove={handleApprove}
                         onReject={handleReject}
@@ -318,6 +331,15 @@ export default function Dashboard() {
           </Tabs>
         </div>
       </main>
+
+      <RejectDialog
+        isOpen={isRejectDialogOpen}
+        onClose={() => {
+          setIsRejectDialogOpen(false);
+          setSelectedReportId(null);
+        }}
+        onSubmit={handleRejectSubmit}
+      />
     </div>
   );
 }
