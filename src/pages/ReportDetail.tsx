@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/components/AuthContext";
@@ -9,6 +8,7 @@ import {
   approveReport,
   rejectReport,
   canEditReport,
+  getUserById,
 } from "@/lib/data";
 import { Button } from "@/components/ui/button";
 import {
@@ -56,12 +56,24 @@ export default function ReportDetail() {
   const navigate = useNavigate();
   const [report, setReport] = useState<Report | null>(null);
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
+  const [branchManagerName, setBranchManagerName] = useState<string>("");
 
   useEffect(() => {
     async function loadReport() {
       try {
         const reportData = await getReportById(id as string);
         setReport(reportData);
+        
+        if (reportData?.branchManager) {
+          try {
+            const managerData = await getUserById(reportData.branchManager);
+            if (managerData) {
+              setBranchManagerName(managerData.name);
+            }
+          } catch (error) {
+            console.error("Failed to load branch manager data", error);
+          }
+        }
       } catch (error) {
         toast.error("Failed to load report");
       }
@@ -255,6 +267,10 @@ export default function ReportDetail() {
     return `Rp${value.toLocaleString()}`;
   };
 
+  const filteredOtherExpenses = report.expenseInfo.otherExpenses.filter(
+    expense => expense.description && expense.description.trim() !== "" && expense.amount > 0
+  );
+
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900 animate-fadeIn">
       <NavBar />
@@ -335,7 +351,7 @@ export default function ReportDetail() {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Manajer Cabang:</span>
-                      <span className="font-medium">{report.locationInfo.branchManager}</span>
+                      <span className="font-medium">{branchManagerName || "Tidak ada data"}</span>
                     </div>
                   </div>
                 </div>
@@ -422,9 +438,9 @@ export default function ReportDetail() {
                       <TableCell className="text-right">{formatCurrency(report.expenseInfo.soap)}</TableCell>
                     </TableRow>
                     
-                    {report.expenseInfo.otherExpenses && report.expenseInfo.otherExpenses.length > 0 && (
+                    {filteredOtherExpenses.length > 0 && (
                       <>
-                        {report.expenseInfo.otherExpenses.map((expense) => (
+                        {filteredOtherExpenses.map((expense) => (
                           <TableRow key={expense.id}>
                             <TableCell>{expense.description}</TableCell>
                             <TableCell className="text-right">{formatCurrency(expense.amount)}</TableCell>
