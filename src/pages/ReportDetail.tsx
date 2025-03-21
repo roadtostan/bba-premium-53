@@ -264,7 +264,7 @@ export default function ReportDetail() {
   };
 
   const formatCurrency = (value: number) => {
-    return `Rp${value.toLocaleString()}`;
+    return `Rp${value.toLocaleString('id-ID')}`;
   };
 
   const filteredOtherExpenses = report.expenseInfo.otherExpenses.filter(
