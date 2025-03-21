@@ -31,7 +31,7 @@ export interface Report {
   content: string;
   date: string;
   status: ReportStatus;
-  totalSales: number;
+  total_sales: number;
   branchId: string;
   branchName: string;
   subdistrictId: string;
