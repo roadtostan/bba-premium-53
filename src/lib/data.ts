@@ -82,6 +82,13 @@ export async function canEditReport(userId: string, reportId: string): Promise<b
       return true;
     }
     
+    // Branch user can edit their own reports that are in draft or rejected status
+    if (user.role === 'branch_user' && 
+        report.branch_manager === userId && 
+        (report.status === 'draft' || report.status === 'rejected')) {
+      return true;
+    }
+    
     // Subdistrict admin can edit reports in their subdistrict
     // Including rejected reports so they can fix and resubmit
     if (
