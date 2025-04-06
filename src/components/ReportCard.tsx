@@ -37,13 +37,24 @@ export default function ReportCard({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
   const [canEdit, setCanEdit] = useState(false);
+  const [isCheckingPermission, setIsCheckingPermission] = useState(false);
 
   useEffect(() => {
     // Check if user can edit this report
     const checkEditPermission = async () => {
       if (user) {
-        const hasEditPermission = await canEditReport(user.id, report.id);
-        setCanEdit(hasEditPermission);
+        setIsCheckingPermission(true);
+        try {
+          console.log("Checking edit permission for report:", report.id, "user:", user.id);
+          const hasEditPermission = await canEditReport(user.id, report.id);
+          console.log("Edit permission result:", hasEditPermission, "for report:", report.id);
+          setCanEdit(hasEditPermission);
+        } catch (error) {
+          console.error("Error checking edit permission:", error);
+          setCanEdit(false);
+        } finally {
+          setIsCheckingPermission(false);
+        }
       }
     };
     
@@ -216,7 +227,11 @@ export default function ReportCard({
             </Button>
           </Link>
           <div className="flex gap-2">
-            {canEdit && (
+            {isCheckingPermission ? (
+              <Button variant="outline" size="sm" disabled>
+                Checking...
+              </Button>
+            ) : canEdit && (
               <Link to={`/edit-report/${report.id}`}>
                 <Button
                   variant="outline"

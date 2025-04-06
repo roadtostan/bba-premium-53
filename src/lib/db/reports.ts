@@ -208,6 +208,7 @@ export async function canEditReport(
   reportId: string
 ): Promise<boolean> {
   try {
+    // Using an RPC call to check if user can edit this report
     const { data, error } = await supabase.rpc("can_edit_report", {
       p_user_id: userId,
       p_report_id: reportId,
@@ -218,7 +219,60 @@ export async function canEditReport(
       return false;
     }
 
-    return data || false;
+    // If the RPC call fails or returns false, fallback to client-side check
+    if (!data) {
+      // Get the report details
+      const { data: report, error: reportError } = await supabase
+        .from("reports")
+        .select(`
+          id, status, branch_manager,
+          branch:branch_id(name),
+          subdistrict:subdistrict_id(name),
+          city:city_id(name)
+        `)
+        .eq("id", reportId)
+        .single();
+      
+      if (reportError || !report) {
+        console.error("Error fetching report:", reportError);
+        return false;
+      }
+      
+      // Get user details
+      const { data: user, error: userError } = await supabase
+        .from("users")
+        .select("id, role, subdistrict, city")
+        .eq("id", userId)
+        .single();
+      
+      if (userError || !user) {
+        console.error("Error fetching user:", userError);
+        return false;
+      }
+      
+      // Super admin can edit any report
+      if (user.role === 'super_admin') {
+        return true;
+      }
+      
+      // Branch user can edit their own reports that are in draft or rejected status
+      if (user.role === 'branch_user' && 
+          report.branch_manager === userId && 
+          (report.status === 'draft' || report.status === 'rejected')) {
+        return true;
+      }
+      
+      // Subdistrict admin can edit reports in their subdistrict
+      if (user.role === 'subdistrict_admin' &&
+          user.subdistrict === report.subdistrict.name &&
+          (report.status === 'pending_subdistrict' || report.status === 'rejected')) {
+        return true;
+      }
+      
+      return false;
+    }
+
+    return data;
   } catch (error) {
     console.error("Error in canEditReport:", error);
     return false;

@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/components/AuthContext";
@@ -60,7 +59,6 @@ export default function ReportDetail() {
   const [branchManagerName, setBranchManagerName] = useState<string>("");
   const [canEdit, setCanEdit] = useState(false);
 
-  // Check if user can comment (only subdistrict_admin, city_admin, and super_admin)
   const canComment = user && ["subdistrict_admin", "city_admin", "super_admin"].includes(user.role);
 
   useEffect(() => {
@@ -80,9 +78,10 @@ export default function ReportDetail() {
           }
         }
 
-        // Check if user can edit this report
         if (user) {
+          console.log("Checking edit permissions for report:", id, "for user:", user.id);
           const hasEditPermission = await canEditReport(user.id, id as string);
+          console.log("Edit permission result:", hasEditPermission);
           setCanEdit(hasEditPermission);
         }
       } catch (error) {
@@ -163,13 +162,11 @@ export default function ReportDetail() {
     }
   };
 
-  // Only city_admin can reject reports
   const canReject = 
     user && user.role === "city_admin" && 
     report.status === "pending_city" &&
     report.cityName === user.city;
   
-  // Subdistrict_admin can only approve
   const canApprove =
     user &&
     ((user.role === "subdistrict_admin" &&
@@ -271,7 +268,6 @@ export default function ReportDetail() {
     return `Rp${value.toLocaleString("id-ID")}`;
   };
 
-  // Filter out empty other expenses
   const filteredOtherExpenses = report.expenseInfo.otherExpenses.filter(
     (expense) =>
       expense.description &&
@@ -335,7 +331,6 @@ export default function ReportDetail() {
                 <p className="whitespace-pre-line">{report.content}</p>
               </div>
 
-              {/* Location Information */}
               <div>
                 <h3 className="text-base font-medium flex items-center gap-2 mb-3 pt-2">
                   <MapPin className="h-5 w-5" />
@@ -375,7 +370,6 @@ export default function ReportDetail() {
                 </div>
               </div>
 
-              {/* Product Information */}
               <div>
                 <h3 className="text-base font-medium flex items-center gap-2 mb-3 pt-2">
                   <Package className="h-5 w-5" />
@@ -423,7 +417,6 @@ export default function ReportDetail() {
                 </Table>
               </div>
 
-              {/* Expense Information */}
               <div>
                 <h3 className="text-base font-medium flex items-center gap-2 mb-3 pt-2">
                   <Receipt className="h-5 w-5" />
@@ -505,7 +498,6 @@ export default function ReportDetail() {
                 </Table>
               </div>
 
-              {/* Income Information */}
               <div>
                 <h3 className="text-base font-medium flex items-center gap-2 mb-3 pt-2">
                   <DollarSign className="h-5 w-5" />
@@ -600,7 +592,6 @@ export default function ReportDetail() {
             </CardFooter>
           </Card>
 
-          {/* Only show comments section for admins */}
           {canComment && (
             <div>
               <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
