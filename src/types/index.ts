@@ -35,18 +35,18 @@ export interface Report {
   cityId: string;
   cityName: string;
   createdBy: string;
-  createdAt: string;
-  updatedAt: string;
-  branch_manager?: string; // Adding the snake_case version to match DB column
-  comments?: Comment[];
-  rejectionReason?: string;
+  created_at: string;
+  updated_at: string;
+  branch_manager?: string; 
+  comments?: ReportComment[];
+  rejection_reason?: string;
   locationInfo: LocationInfo;
   productInfo: ProductInfo;
   expenseInfo: ExpenseInfo;
   incomeInfo: IncomeInfo;
 }
 
-export interface Comment {
+export interface ReportComment {
   id: string;
   text: string;
   user_id: string;
