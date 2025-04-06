@@ -1,4 +1,3 @@
-
 export type UserRole =
   | "branch_user"
   | "subdistrict_admin"
@@ -27,7 +26,7 @@ export interface Report {
   title: string;
   date: string;
   content: string;
-  totalSales: number;
+  total_sales: number;
   status: ReportStatus;
   branchId: string;
   branchName: string;
@@ -36,11 +35,11 @@ export interface Report {
   cityId: string;
   cityName: string;
   createdBy: string;
-  created_at: string;
-  updated_at: string;
-  branch_manager?: string;
+  createdAt: string;
+  updatedAt: string;
+  branch_manager?: string; // Adding the snake_case version to match DB column
   comments?: Comment[];
-  rejection_reason?: string;
+  rejectionReason?: string;
   locationInfo: LocationInfo;
   productInfo: ProductInfo;
   expenseInfo: ExpenseInfo;
@@ -53,7 +52,6 @@ export interface Comment {
   user_id: string;
   user_name: string;
   created_at: string;
-  key?: string;
 }
 
 export interface LocationInfo {
