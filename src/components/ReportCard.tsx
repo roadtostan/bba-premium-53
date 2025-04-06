@@ -13,11 +13,11 @@ import { Clock, CheckCheck, X, FileText, Edit } from "lucide-react";
 import { Report, ReportStatus } from "@/types";
 import { useAuth } from "./AuthContext";
 import { Link } from "react-router-dom";
-import { approveReport, rejectReport } from "@/lib/data";
+import { approveReport, rejectReport, canEditReport } from "@/lib/data";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { toast } from "sonner";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import RejectDialog from "./RejectDialog";
 
 interface ReportCardProps {
@@ -36,6 +36,19 @@ export default function ReportCard({
   const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
+  const [canEdit, setCanEdit] = useState(false);
+
+  useEffect(() => {
+    // Check if user can edit this report
+    const checkEditPermission = async () => {
+      if (user) {
+        const hasEditPermission = await canEditReport(user.id, report.id);
+        setCanEdit(hasEditPermission);
+      }
+    };
+    
+    checkEditPermission();
+  }, [user, report.id]);
 
   const getStatusBadge = (status: ReportStatus) => {
     switch (status) {
@@ -97,13 +110,6 @@ export default function ReportCard({
       (user.role === "city_admin" &&
         report.status === "pending_city" &&
         report.cityName === user.city));
-
-  // Only subdistrict_admin and super_admin can edit reports
-  const canEdit =
-    user &&
-    ((user.role === "subdistrict_admin" && 
-      report.subdistrictName === user.subdistrict) ||
-     user.role === "super_admin");
 
   const handleApprove = async () => {
     setIsSubmitting(true);

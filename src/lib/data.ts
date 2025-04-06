@@ -83,9 +83,11 @@ export async function canEditReport(userId: string, reportId: string): Promise<b
     }
     
     // Subdistrict admin can edit reports in their subdistrict
+    // Including rejected reports so they can fix and resubmit
     if (
       user.role === 'subdistrict_admin' &&
-      user.subdistrict === report.subdistrict.name
+      user.subdistrict === report.subdistrict.name &&
+      (report.status === 'pending_subdistrict' || report.status === 'rejected')
     ) {
       return true;
     }

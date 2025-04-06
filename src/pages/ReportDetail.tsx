@@ -10,6 +10,7 @@ import {
   rejectReport,
   getUserById,
   deleteReport,
+  canEditReport,
 } from "@/lib/data";
 import { Button } from "@/components/ui/button";
 import {
@@ -57,6 +58,7 @@ export default function ReportDetail() {
   const [report, setReport] = useState<Report | null>(null);
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
   const [branchManagerName, setBranchManagerName] = useState<string>("");
+  const [canEdit, setCanEdit] = useState(false);
 
   // Check if user can comment (only subdistrict_admin, city_admin, and super_admin)
   const canComment = user && ["subdistrict_admin", "city_admin", "super_admin"].includes(user.role);
@@ -77,12 +79,18 @@ export default function ReportDetail() {
             console.error("Failed to load branch manager data", error);
           }
         }
+
+        // Check if user can edit this report
+        if (user) {
+          const hasEditPermission = await canEditReport(user.id, id as string);
+          setCanEdit(hasEditPermission);
+        }
       } catch (error) {
         toast.error("Failed to load report");
       }
     }
     loadReport();
-  }, [id]);
+  }, [id, user]);
 
   const [comment, setComment] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -161,7 +169,7 @@ export default function ReportDetail() {
     report.status === "pending_city" &&
     report.cityName === user.city;
   
-  // Subdistrict_admin can only approve, city_admin can approve and reject
+  // Subdistrict_admin can only approve
   const canApprove =
     user &&
     ((user.role === "subdistrict_admin" &&
@@ -170,13 +178,6 @@ export default function ReportDetail() {
       (user.role === "city_admin" &&
         report.status === "pending_city" &&
         report.cityName === user.city));
-
-  // Only subdistrict_admin and super_admin can edit reports
-  const canEdit =
-    user &&
-    ((user.role === "subdistrict_admin" && 
-     report.subdistrictName === user.subdistrict) ||
-     user.role === "super_admin");
 
   const handleApprove = async () => {
     setIsSubmitting(true);
