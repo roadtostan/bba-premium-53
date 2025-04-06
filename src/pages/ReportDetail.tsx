@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/components/AuthContext";
@@ -162,6 +163,13 @@ export default function ReportDetail() {
     }
   };
 
+  // Only city_admin can reject reports
+  const canReject = 
+    user && user.role === "city_admin" && 
+    report.status === "pending_city" &&
+    report.cityName === user.city;
+  
+  // Subdistrict_admin can only approve, city_admin can approve and reject
   const canApprove =
     user &&
     ((user.role === "subdistrict_admin" &&
@@ -171,10 +179,12 @@ export default function ReportDetail() {
         report.status === "pending_city" &&
         report.cityName === user.city));
 
+  // Only subdistrict_admin can edit reports, branch users cannot edit
   const isEditable =
     user &&
-    (user.role === "branch_user" || user.role === "super_admin") &&
-    canEditReport(user.id, report.id);
+    ((user.role === "subdistrict_admin" && 
+     report.subdistrictName === user.subdistrict) ||
+     user.role === "super_admin");
 
   const handleApprove = async () => {
     setIsSubmitting(true);
@@ -583,15 +593,17 @@ export default function ReportDetail() {
 
               {canApprove && (
                 <>
-                  <Button
-                    variant="outline"
-                    onClick={() => setIsRejectDialogOpen(true)}
-                    disabled={isSubmitting}
-                    className="button-transition text-status-rejected border-status-rejected/20 hover:bg-status-rejected/10"
-                  >
-                    <X className="mr-2 h-4 w-4" />
-                    Tolak
-                  </Button>
+                  {canReject && (
+                    <Button
+                      variant="outline"
+                      onClick={() => setIsRejectDialogOpen(true)}
+                      disabled={isSubmitting}
+                      className="button-transition text-status-rejected border-status-rejected/20 hover:bg-status-rejected/10"
+                    >
+                      <X className="mr-2 h-4 w-4" />
+                      Tolak
+                    </Button>
+                  )}
 
                   <Button
                     variant="outline"
@@ -686,11 +698,13 @@ export default function ReportDetail() {
         </div>
       </main>
 
-      <RejectDialog
-        isOpen={isRejectDialogOpen}
-        onClose={() => setIsRejectDialogOpen(false)}
-        onSubmit={handleReject}
-      />
+      {canReject && (
+        <RejectDialog
+          isOpen={isRejectDialogOpen}
+          onClose={() => setIsRejectDialogOpen(false)}
+          onSubmit={handleReject}
+        />
+      )}
     </div>
   );
 }

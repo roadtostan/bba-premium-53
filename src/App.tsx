@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -47,6 +46,27 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
+// Branch user redirect (new component)
+const HomeRedirect = () => {
+  const { user, isLoading } = useAuth();
+  
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
+  
+  if (!user) {
+    return <Navigate to="/login" />;
+  }
+  
+  // Redirect branch users directly to report creation
+  if (user.role === 'branch_user') {
+    return <Navigate to="/create-report" />;
+  }
+  
+  // Other roles go to dashboard
+  return <Dashboard />;
+};
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -58,7 +78,7 @@ const App = () => (
         <AuthProvider>
           <Routes>
             <Route path="/login" element={<Login />} />
-            <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/" element={<ProtectedRoute><HomeRedirect /></ProtectedRoute>} />
             <Route path="/create-report" element={<ProtectedRoute><CreateReport /></ProtectedRoute>} />
             <Route path="/edit-report/:id" element={<ProtectedRoute><CreateReport /></ProtectedRoute>} />
             <Route path="/report/:id" element={<ProtectedRoute><ReportDetail /></ProtectedRoute>} />

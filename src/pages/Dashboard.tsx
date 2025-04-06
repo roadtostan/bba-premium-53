@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/components/AuthContext";
@@ -63,6 +64,9 @@ export default function Dashboard() {
     return <div>Loading...</div>;
   }
 
+  // Branch users are now redirected directly to create report page in App.tsx
+  // This dashboard should only be shown to admins
+
   const canCreate = user.role === "branch_user" && canCreateNewReport(user.id);
 
   const filteredReports = () => {
@@ -119,6 +123,9 @@ export default function Dashboard() {
   };
 
   const handleReject = (reportId: string) => {
+    // Only city_admin can reject
+    if (user.role !== "city_admin") return;
+    
     setSelectedReportId(reportId);
     setIsRejectDialogOpen(true);
   };
@@ -332,14 +339,17 @@ export default function Dashboard() {
         </div>
       </main>
 
-      <RejectDialog
-        isOpen={isRejectDialogOpen}
-        onClose={() => {
-          setIsRejectDialogOpen(false);
-          setSelectedReportId(null);
-        }}
-        onSubmit={handleRejectSubmit}
-      />
+      {/* Only city admins can reject */}
+      {user.role === "city_admin" && (
+        <RejectDialog
+          isOpen={isRejectDialogOpen}
+          onClose={() => {
+            setIsRejectDialogOpen(false);
+            setSelectedReportId(null);
+          }}
+          onSubmit={handleRejectSubmit}
+        />
+      )}
     </div>
   );
 }
