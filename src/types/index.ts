@@ -1,3 +1,4 @@
+
 export type UserRole =
   | "branch_user"
   | "subdistrict_admin"
@@ -5,7 +6,6 @@ export type UserRole =
   | "super_admin";
 
 export type ReportStatus =
-  | "draft"
   | "pending_subdistrict"
   | "pending_city"
   | "approved"

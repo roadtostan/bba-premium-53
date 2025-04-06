@@ -8,7 +8,6 @@ import {
   addReportComment,
   approveReport,
   rejectReport,
-  canEditReport,
   getUserById,
   deleteReport,
 } from "@/lib/data";
@@ -22,7 +21,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Table,
@@ -32,7 +30,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Report, ReportStatus, ReportComment } from "@/types";
+import { Report, ReportStatus, Comment } from "@/types";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
@@ -59,6 +57,9 @@ export default function ReportDetail() {
   const [report, setReport] = useState<Report | null>(null);
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
   const [branchManagerName, setBranchManagerName] = useState<string>("");
+
+  // Check if user can comment (only subdistrict_admin, city_admin, and super_admin)
+  const canComment = user && ["subdistrict_admin", "city_admin", "super_admin"].includes(user.role);
 
   useEffect(() => {
     async function loadReport() {
@@ -111,15 +112,6 @@ export default function ReportDetail() {
 
   const getStatusBadge = (status: ReportStatus) => {
     switch (status) {
-      case "draft":
-        return (
-          <Badge
-            variant="outline"
-            className="status-badge bg-secondary text-secondary-foreground"
-          >
-            Draf
-          </Badge>
-        );
       case "pending_subdistrict":
         return (
           <Badge variant="outline" className="status-badge status-pending">
@@ -179,8 +171,8 @@ export default function ReportDetail() {
         report.status === "pending_city" &&
         report.cityName === user.city));
 
-  // Only subdistrict_admin can edit reports, branch users cannot edit
-  const isEditable =
+  // Only subdistrict_admin and super_admin can edit reports
+  const canEdit =
     user &&
     ((user.role === "subdistrict_admin" && 
      report.subdistrictName === user.subdistrict) ||
@@ -278,25 +270,13 @@ export default function ReportDetail() {
     return `Rp${value.toLocaleString("id-ID")}`;
   };
 
+  // Filter out empty other expenses
   const filteredOtherExpenses = report.expenseInfo.otherExpenses.filter(
     (expense) =>
       expense.description &&
       expense.description.trim() !== "" &&
       expense.amount > 0
   );
-
-  const handleDelete = async () => {
-    if (!report) return;
-
-    try {
-      await deleteReport(report.id);
-      toast.success("Laporan berhasil dihapus");
-      navigate("/");
-    } catch (error) {
-      console.error("Error deleting report:", error);
-      toast.error("Gagal menghapus laporan");
-    }
-  };
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900 animate-fadeIn">
@@ -331,7 +311,7 @@ export default function ReportDetail() {
               <span>•</span>
               <span>
                 Dibuat:{" "}
-                {format(new Date(report.created_at), "PPP", {
+                {format(new Date(report.createdAt), "PPP", {
                   locale: idLocale,
                 })}
               </span>
@@ -568,18 +548,18 @@ export default function ReportDetail() {
                 </Table>
               </div>
 
-              {report.status === "rejected" && report.rejection_reason && (
+              {report.status === "rejected" && report.rejectionReason && (
                 <div className="p-4 bg-status-rejected/5 rounded-md border border-status-rejected/20">
                   <h3 className="text-sm font-medium text-status-rejected mb-2">
                     Alasan Penolakan
                   </h3>
-                  <p>{report.rejection_reason}</p>
+                  <p>{report.rejectionReason}</p>
                 </div>
               )}
             </CardContent>
 
             <CardFooter className="flex justify-end space-x-4">
-              {isEditable && (
+              {canEdit && (
                 <Link to={`/edit-report/${report.id}`}>
                   <Button
                     variant="outline"
@@ -616,85 +596,76 @@ export default function ReportDetail() {
                   </Button>
                 </>
               )}
-
-              {report.status === "draft" && (
-                <Button
-                  variant="outline"
-                  onClick={handleDelete}
-                  disabled={isSubmitting}
-                  className="button-transition text-status-rejected border-status-rejected/20 hover:bg-status-rejected/10"
-                >
-                  <X className="mr-2 h-4 w-4" />
-                  Hapus Laporan
-                </Button>
-              )}
             </CardFooter>
           </Card>
 
-          <div>
-            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-              <MessageSquare className="h-5 w-5" />
-              Komentar
-            </h2>
+          {/* Only show comments section for admins */}
+          {canComment && (
+            <div>
+              <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                <MessageSquare className="h-5 w-5" />
+                Komentar
+              </h2>
 
-            <div className="space-y-4 mb-6">
-              {!report.comments || report.comments.length === 0 ? (
-                <p className="text-muted-foreground text-center py-6">
-                  Belum ada komentar
-                </p>
-              ) : (
-                report.comments.map((comment) => (
-                  <div
-                    key={comment.id}
-                    className="p-4 glass-panel rounded-lg border"
-                  >
-                    <div className="flex justify-between items-start">
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-medium">{comment.user_name}</h3>
-                        <span className="text-xs text-muted-foreground">
-                          {comment.created_at
-                            ? format(new Date(comment.created_at), "PPP", {
-                                locale: idLocale,
-                              })
-                            : "Tanggal tidak tersedia"}
-                        </span>
+              <div className="space-y-4 mb-6">
+                {!report.comments || report.comments.length === 0 ? (
+                  <p className="text-muted-foreground text-center py-6">
+                    Belum ada komentar
+                  </p>
+                ) : (
+                  report.comments.map((comment) => (
+                    <div
+                      key={comment.id}
+                      className="p-4 glass-panel rounded-lg border"
+                    >
+                      <div className="flex justify-between items-start">
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-medium">{comment.user_name}</h3>
+                          <span className="text-xs text-muted-foreground">
+                            {comment.created_at
+                              ? format(new Date(comment.created_at), "PPP", {
+                                  locale: idLocale,
+                                })
+                              : "Tanggal tidak tersedia"}
+                          </span>
+                        </div>
                       </div>
+                      <p className="mt-2 text-sm whitespace-pre-wrap">
+                        {comment.text}
+                      </p>
                     </div>
-                    <p className="mt-2 text-sm whitespace-pre-wrap">
-                      {comment.text}
-                    </p>
-                  </div>
-                ))
-              )}
-            </div>
-
-            <form
-              onSubmit={handleSubmitComment}
-              className="glass-panel p-4 rounded-lg border"
-            >
-              <h3 className="font-medium mb-2">Tambah Komentar</h3>
-              <Textarea
-                value={comment}
-                onChange={(e) => setComment(e.target.value)}
-                placeholder="Tulis komentar Anda di sini..."
-                className="mb-3 min-h-[100px]"
-              />
-              <div className="flex justify-end">
-                <Button
-                  type="submit"
-                  disabled={isSubmitting || !comment.trim()}
-                  className="button-transition flex items-center gap-2"
-                >
-                  {isSubmitting ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Send className="h-4 w-4" />
-                  )}
-                  Kirim Komentar
-                </Button>
+                  ))
+                )}
               </div>
-            </form>
-          </div>
+
+              <form
+                onSubmit={handleSubmitComment}
+                className="glass-panel p-4 rounded-lg border"
+              >
+                <h3 className="font-medium mb-2">Tambah Komentar</h3>
+                <Textarea
+                  value={comment}
+                  onChange={(e) => setComment(e.target.value)}
+                  placeholder="Tulis komentar Anda di sini..."
+                  className="mb-3 min-h-[100px]"
+                />
+                <div className="flex justify-end">
+                  <Button
+                    type="submit"
+                    disabled={isSubmitting || !comment.trim()}
+                    className="button-transition flex items-center gap-2"
+                  >
+                    {isSubmitting ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Send className="h-4 w-4" />
+                    )}
+                    Kirim Komentar
+                  </Button>
+                </div>
+              </form>
+            </div>
+          )}
         </div>
       </main>
 

@@ -13,7 +13,7 @@ import { Clock, CheckCheck, X, FileText, Edit } from "lucide-react";
 import { Report, ReportStatus } from "@/types";
 import { useAuth } from "./AuthContext";
 import { Link } from "react-router-dom";
-import { canEditReport, approveReport, rejectReport } from "@/lib/data";
+import { approveReport, rejectReport } from "@/lib/data";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -39,15 +39,6 @@ export default function ReportCard({
 
   const getStatusBadge = (status: ReportStatus) => {
     switch (status) {
-      case "draft":
-        return (
-          <Badge
-            variant="outline"
-            className="status-badge bg-secondary text-secondary-foreground"
-          >
-            Draf
-          </Badge>
-        );
       case "pending_subdistrict":
         return (
           <Badge variant="outline" className="status-badge status-pending">
@@ -79,8 +70,6 @@ export default function ReportCard({
 
   const getStatusIcon = (status: ReportStatus) => {
     switch (status) {
-      case "draft":
-        return <FileText className="h-4 w-4 text-secondary-foreground" />;
       case "pending_subdistrict":
       case "pending_city":
         return <Clock className="h-4 w-4 text-status-pending" />;
@@ -99,7 +88,7 @@ export default function ReportCard({
     report.status === "pending_city" &&
     report.cityName === user.city;
 
-  // Subdistrict_admin can only approve, city_admin can approve and reject
+  // Subdistrict_admin can only approve
   const canApprove =
     user &&
     ((user.role === "subdistrict_admin" &&
@@ -109,11 +98,11 @@ export default function ReportCard({
         report.status === "pending_city" &&
         report.cityName === user.city));
 
-  // Only subdistrict_admin can edit reports, branch users cannot edit
-  const isEditable =
+  // Only subdistrict_admin and super_admin can edit reports
+  const canEdit =
     user &&
     ((user.role === "subdistrict_admin" && 
-     report.subdistrictName === user.subdistrict) ||
+      report.subdistrictName === user.subdistrict) ||
      user.role === "super_admin");
 
   const handleApprove = async () => {
@@ -221,7 +210,7 @@ export default function ReportCard({
             </Button>
           </Link>
           <div className="flex gap-2">
-            {isEditable && (
+            {canEdit && (
               <Link to={`/edit-report/${report.id}`}>
                 <Button
                   variant="outline"
