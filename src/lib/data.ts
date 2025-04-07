@@ -67,7 +67,7 @@ export async function getReportLocationData(reportId: string): Promise<{
   city_id: string;
 } | null> {
   try {
-    // Use a direct query instead of rpc since the type isn't registered
+    // Use a direct query instead of rpc to avoid policy recursion issues
     const { data, error } = await supabase
       .from("reports")
       .select("branch_id, subdistrict_id, city_id")
