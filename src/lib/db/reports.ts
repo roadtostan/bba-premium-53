@@ -263,8 +263,16 @@ export async function canEditReport(
       }
 
       // Access single property objects correctly to fix the TS error
-      // The issue was that branch, subdistrict, city were being treated as arrays but they are objects
-      const reportSubdistrictName = report.subdistrict ? report.subdistrict.name : null;
+      // Correctly access the nested properties - these are objects returned by Supabase, not arrays
+      const reportSubdistrictName = report.subdistrict?.name || null;
+      
+      // Debug logging to see what values we're working with
+      console.log("Report data:", {
+        reportSubdistrict: report.subdistrict,
+        reportSubdistrictName,
+        userSubdistrict: user.subdistrict,
+        reportStatus: report.status
+      });
       
       // Subdistrict admin can edit reports in their subdistrict
       if (user.role === 'subdistrict_admin' &&
@@ -272,7 +280,7 @@ export async function canEditReport(
           (report.status === 'pending_subdistrict' || report.status === 'rejected')) {
         console.log("Subdistrict admin can edit this report:", {
           userSubdistrict: user.subdistrict,
-          reportSubdistrictName: reportSubdistrictName,
+          reportSubdistrictName,
           reportStatus: report.status
         });
         return true;
