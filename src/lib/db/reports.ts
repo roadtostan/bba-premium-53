@@ -208,6 +208,8 @@ export async function canEditReport(
   reportId: string
 ): Promise<boolean> {
   try {
+    console.log(`Checking edit permissions for report ${reportId} and user ${userId}`);
+    
     // Using an RPC call to check if user can edit this report
     const { data, error } = await supabase.rpc("can_edit_report", {
       p_user_id: userId,
@@ -219,77 +221,8 @@ export async function canEditReport(
       return false;
     }
 
-    // If the RPC call fails or returns false, fallback to client-side check
-    if (!data) {
-      // Get the report details
-      const { data: report, error: reportError } = await supabase
-        .from("reports")
-        .select(`
-          id, status, branch_manager,
-          branch:branch_id(name),
-          subdistrict:subdistrict_id(name),
-          city:city_id(name)
-        `)
-        .eq("id", reportId)
-        .single();
-      
-      if (reportError || !report) {
-        console.error("Error fetching report:", reportError);
-        return false;
-      }
-      
-      // Get user details
-      const { data: user, error: userError } = await supabase
-        .from("users")
-        .select("id, role, subdistrict, city")
-        .eq("id", userId)
-        .single();
-      
-      if (userError || !user) {
-        console.error("Error fetching user:", userError);
-        return false;
-      }
-      
-      // Super admin can edit any report
-      if (user.role === 'super_admin') {
-        return true;
-      }
-      
-      // Branch user can edit their own reports that are in draft or rejected status
-      if (user.role === 'branch_user' && 
-          report.branch_manager === userId && 
-          (report.status === 'draft' || report.status === 'rejected')) {
-        return true;
-      }
-
-      // Access single property objects correctly to fix the TS error
-      // Correctly access the nested properties - these are objects returned by Supabase, not arrays
-      const reportSubdistrictName = report.subdistrict?.name || null;
-      
-      // Debug logging to see what values we're working with
-      console.log("Report data:", {
-        reportSubdistrict: report.subdistrict,
-        reportSubdistrictName,
-        userSubdistrict: user.subdistrict,
-        reportStatus: report.status
-      });
-      
-      // Subdistrict admin can edit reports in their subdistrict
-      if (user.role === 'subdistrict_admin' &&
-          user.subdistrict === reportSubdistrictName &&
-          (report.status === 'pending_subdistrict' || report.status === 'rejected')) {
-        console.log("Subdistrict admin can edit this report:", {
-          userSubdistrict: user.subdistrict,
-          reportSubdistrictName,
-          reportStatus: report.status
-        });
-        return true;
-      }
-      
-      return false;
-    }
-
-    return data;
+    console.log("RPC can_edit_report result:", data);
+    return !!data;
   } catch (error) {
     console.error("Error in canEditReport:", error);
     return false;

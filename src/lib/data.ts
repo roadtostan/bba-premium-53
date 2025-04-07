@@ -36,75 +36,24 @@ export {
   rejectReport,
 } from "./db";
 
-// Function to check if a user can edit a specific report
+// Function to check if a user can edit a specific report using the RPC function
 export async function canEditReport(userId: string, reportId: string): Promise<boolean> {
   try {
-    // Get the report details
-    const { data: report, error } = await supabase
-      .from("reports")
-      .select(`
-        *,
-        branch:branch_id(name),
-        subdistrict:subdistrict_id(name),
-        city:city_id(name)
-      `)
-      .eq("id", reportId)
-      .single();
+    console.log("Checking edit permissions via RPC for report:", reportId, "and user:", userId);
+    
+    // Using the RPC function we created in Supabase
+    const { data, error } = await supabase.rpc("can_edit_report", {
+      p_user_id: userId,
+      p_report_id: reportId,
+    });
     
     if (error) {
-      console.error("Error fetching report:", error);
+      console.error("Error checking edit permission:", error);
       return false;
     }
     
-    if (!report) {
-      console.error("Report not found");
-      return false;
-    }
-    
-    // Get user details 
-    const { data: user, error: userError } = await supabase
-      .from("users")
-      .select("*")
-      .eq("id", userId)
-      .single();
-    
-    if (userError) {
-      console.error("Error fetching user:", userError);
-      return false;
-    }
-    
-    if (!user) {
-      return false;
-    }
-    
-    // Super admin can edit any report
-    if (user.role === 'super_admin') {
-      return true;
-    }
-    
-    // Branch user can edit their own reports that are in draft or rejected status
-    if (user.role === 'branch_user' && 
-        report.branch_manager === userId && 
-        (report.status === 'draft' || report.status === 'rejected')) {
-      return true;
-    }
-    
-    // Subdistrict admin can edit reports in their subdistrict
-    // Including rejected reports so they can fix and resubmit
-    if (
-      user.role === 'subdistrict_admin' &&
-      user.subdistrict === report.subdistrict.name &&
-      (report.status === 'pending_subdistrict' || report.status === 'rejected')
-    ) {
-      console.log("Subdistrict admin can edit this report:", {
-        userSubdistrict: user.subdistrict,
-        reportSubdistrict: report.subdistrict.name,
-        reportStatus: report.status
-      });
-      return true;
-    }
-    
-    return false;
+    console.log("canEditReport result:", data);
+    return !!data;
   } catch (error) {
     console.error("Error in canEditReport:", error);
     return false;
