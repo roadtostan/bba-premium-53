@@ -261,11 +261,20 @@ export async function canEditReport(
           (report.status === 'draft' || report.status === 'rejected')) {
         return true;
       }
+
+      // Access single property objects correctly to fix the TS error
+      // The issue was that branch, subdistrict, city were being treated as arrays but they are objects
+      const reportSubdistrictName = report.subdistrict ? report.subdistrict.name : null;
       
       // Subdistrict admin can edit reports in their subdistrict
       if (user.role === 'subdistrict_admin' &&
-          user.subdistrict === report.subdistrict.name &&
+          user.subdistrict === reportSubdistrictName &&
           (report.status === 'pending_subdistrict' || report.status === 'rejected')) {
+        console.log("Subdistrict admin can edit this report:", {
+          userSubdistrict: user.subdistrict,
+          reportSubdistrictName: reportSubdistrictName,
+          reportStatus: report.status
+        });
         return true;
       }
       
