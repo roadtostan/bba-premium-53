@@ -286,18 +286,54 @@ export async function createReport(reportData: any) {
 
 export async function updateReport(reportId: string, reportData: any) {
   try {
+    console.log("Updating report with data:", reportData);
+    console.log("Location IDs:", {
+      branch_id: reportData.branch_id,
+      subdistrict_id: reportData.subdistrict_id, 
+      city_id: reportData.city_id
+    });
+
     // Ensure we have required location IDs
     if (
       !reportData.branch_id ||
       !reportData.subdistrict_id ||
       !reportData.city_id
     ) {
-      throw new Error(
-        "Data lokasi tidak lengkap. Pastikan branch_id, subdistrict_id, dan city_id tersedia."
-      );
+      console.error("Missing location IDs:", {
+        branch_id: reportData.branch_id,
+        subdistrict_id: reportData.subdistrict_id,
+        city_id: reportData.city_id
+      });
+      
+      // If this is a subdistrict admin editing, we need to get the original report's location data
+      if (reportData.status === "pending_city") {
+        console.log("Subdistrict admin editing - fetching original report location data");
+        const { data: originalReport, error } = await supabase
+          .from("reports")
+          .select("branch_id, subdistrict_id, city_id")
+          .eq("id", reportId)
+          .single();
+          
+        if (error) {
+          throw error;
+        }
+        
+        if (originalReport) {
+          console.log("Using original report location data:", originalReport);
+          reportData.branch_id = originalReport.branch_id;
+          reportData.subdistrict_id = originalReport.subdistrict_id;
+          reportData.city_id = originalReport.city_id;
+        } else {
+          throw new Error(
+            "Data lokasi tidak lengkap. Pastikan branch_id, subdistrict_id, dan city_id tersedia."
+          );
+        }
+      } else {
+        throw new Error(
+          "Data lokasi tidak lengkap. Pastikan branch_id, subdistrict_id, dan city_id tersedia."
+        );
+      }
     }
-
-    console.log("Updating report with data:", reportData);
 
     // Menggunakan RPC untuk menghindari masalah policy
     const { data, error } = await supabase.rpc("update_report", {

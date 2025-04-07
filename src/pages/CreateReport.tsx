@@ -180,6 +180,11 @@ export default function CreateReport() {
             branchManager: reportData?.branchManager ?? user?.name ?? "",
           });
 
+          // Importantly, set the IDs for location data
+          setBranchId(reportData?.branchId ?? "");
+          setSubdistrictId(reportData?.subdistrictId ?? "");
+          setCityId(reportData?.cityId ?? "");
+
           // Set product info
           setProductInfo({
             initialStock: reportData?.productInfo?.initialStock ?? 0,
@@ -213,11 +218,6 @@ export default function CreateReport() {
             remainingIncome: reportData?.incomeInfo?.remainingIncome ?? 0,
             totalIncome: reportData?.incomeInfo?.totalIncome ?? 0,
           });
-
-          // Set location IDs
-          setBranchId(reportData?.branchId ?? "");
-          setSubdistrictId(reportData?.subdistrictId ?? "");
-          setCityId(reportData?.cityId ?? "");
         } catch (error) {
           console.error("Error fetching report data:", error);
           toast.error("Gagal mengambil data laporan");
@@ -229,7 +229,6 @@ export default function CreateReport() {
   }, [isEditMode, id, user]);
 
   useEffect(() => {
-    // Calculate total expenses
     const totalExpenses =
       expenseInfo.employeeSalary +
       expenseInfo.employeeBonus +
@@ -243,10 +242,8 @@ export default function CreateReport() {
         0
       );
 
-    // Calculate total income
     const totalIncome = incomeInfo.cashReceipts + incomeInfo.transferReceipts;
 
-    // Calculate remaining income (net)
     const remainingIncome = totalIncome - totalExpenses;
 
     setExpenseInfo((prev) => ({ ...prev, totalExpenses: totalExpenses }));
@@ -378,30 +375,6 @@ export default function CreateReport() {
     setIsSubmitting(true);
 
     try {
-      // Pastikan kita memiliki branch_id dan subdistrict_id
-      if (!branchId || !subdistrictId || !cityId) {
-        // Jika belum ada, coba ambil dari data user
-        if (user?.branch) {
-          const branches = await getBranches();
-          const userBranch = branches.find((b) => b.name === user.branch);
-
-          if (userBranch) {
-            setBranchId(userBranch.id);
-            setSubdistrictId(userBranch.subdistrict_id);
-
-            // Get subdistrict to find the city ID
-            const subdistricts = await getSubdistricts();
-            const userSubdistrict = subdistricts.find(
-              (s) => s.id === userBranch.subdistrict_id
-            );
-
-            if (userSubdistrict) {
-              setCityId(userSubdistrict.city_id);
-            }
-          }
-        }
-      }
-
       // Determine status based on user role and current status
       let reportStatus: ReportStatus;
       if (saveAsDraft) {
@@ -414,6 +387,10 @@ export default function CreateReport() {
         reportStatus = "pending_subdistrict"; // Default
       }
 
+      // For subdistrict admin, ensure we're using the original report's location data
+      // and not trying to update them with potentially null values
+      console.log("Current IDs before submit:", { branchId, subdistrictId, cityId });
+      
       // Prepare report data with the correct structure matching database columns
       const reportData = {
         title,
@@ -421,7 +398,7 @@ export default function CreateReport() {
         date: date?.toISOString().split("T")[0], // Format as YYYY-MM-DD
         status: reportStatus,
 
-        // Location IDs - pastikan menggunakan nilai yang sudah diupdate
+        // Location IDs - use the values we have from the report data
         branch_id: branchId,
         subdistrict_id: subdistrictId,
         city_id: cityId,
