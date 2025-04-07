@@ -298,8 +298,19 @@ export async function updateReport(reportId: string, reportData: any) {
     if (!reportData.branch_id || !reportData.subdistrict_id || !reportData.city_id) {
       console.log("Missing location IDs, fetching from original report");
       
-      // Get the original report's location data using our new function
-      const locationData = await getReportLocationData(reportId);
+      // Get the original report's location data using a direct query instead of RPC
+      const { data: locationData, error: locationError } = await supabase
+        .from("reports")
+        .select("branch_id, subdistrict_id, city_id")
+        .eq("id", reportId)
+        .single();
+      
+      if (locationError) {
+        console.error("Error fetching location data:", locationError);
+        throw new Error(
+          "Data lokasi tidak lengkap. Pastikan branch_id, subdistrict_id, dan city_id tersedia."
+        );
+      }
       
       if (locationData) {
         console.log("Retrieved location data:", locationData);

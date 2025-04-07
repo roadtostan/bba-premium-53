@@ -67,16 +67,23 @@ export async function getReportLocationData(reportId: string): Promise<{
   city_id: string;
 } | null> {
   try {
-    const { data, error } = await supabase.rpc("get_report_location_data", {
-      p_report_id: reportId,
-    });
+    // Use a direct query instead of rpc since the type isn't registered
+    const { data, error } = await supabase
+      .from("reports")
+      .select("branch_id, subdistrict_id, city_id")
+      .eq("id", reportId)
+      .single();
     
     if (error) {
       console.error("Error getting report location data:", error);
       return null;
     }
     
-    return data;
+    return {
+      branch_id: data.branch_id,
+      subdistrict_id: data.subdistrict_id,
+      city_id: data.city_id
+    };
   } catch (error) {
     console.error("Error in getReportLocationData:", error);
     return null;
