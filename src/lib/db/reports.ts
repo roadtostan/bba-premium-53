@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import type { Report, ReportStatus } from "@/types";
+import { getReportLocationData } from "@/lib/data";
 
 // Fungsi helper untuk transformasi data
 function transformReportData(report: any): Report {
@@ -293,41 +294,18 @@ export async function updateReport(reportId: string, reportData: any) {
       city_id: reportData.city_id
     });
 
-    // Ensure we have required location IDs
-    if (
-      !reportData.branch_id ||
-      !reportData.subdistrict_id ||
-      !reportData.city_id
-    ) {
-      console.error("Missing location IDs:", {
-        branch_id: reportData.branch_id,
-        subdistrict_id: reportData.subdistrict_id,
-        city_id: reportData.city_id
-      });
+    // Check if we have location IDs and get them if missing
+    if (!reportData.branch_id || !reportData.subdistrict_id || !reportData.city_id) {
+      console.log("Missing location IDs, fetching from original report");
       
-      // If this is a subdistrict admin editing, we need to get the original report's location data
-      if (reportData.status === "pending_city") {
-        console.log("Subdistrict admin editing - fetching original report location data");
-        const { data: originalReport, error } = await supabase
-          .from("reports")
-          .select("branch_id, subdistrict_id, city_id")
-          .eq("id", reportId)
-          .single();
-          
-        if (error) {
-          throw error;
-        }
-        
-        if (originalReport) {
-          console.log("Using original report location data:", originalReport);
-          reportData.branch_id = originalReport.branch_id;
-          reportData.subdistrict_id = originalReport.subdistrict_id;
-          reportData.city_id = originalReport.city_id;
-        } else {
-          throw new Error(
-            "Data lokasi tidak lengkap. Pastikan branch_id, subdistrict_id, dan city_id tersedia."
-          );
-        }
+      // Get the original report's location data using our new function
+      const locationData = await getReportLocationData(reportId);
+      
+      if (locationData) {
+        console.log("Retrieved location data:", locationData);
+        reportData.branch_id = locationData.branch_id;
+        reportData.subdistrict_id = locationData.subdistrict_id;
+        reportData.city_id = locationData.city_id;
       } else {
         throw new Error(
           "Data lokasi tidak lengkap. Pastikan branch_id, subdistrict_id, dan city_id tersedia."
@@ -335,7 +313,7 @@ export async function updateReport(reportId: string, reportData: any) {
       }
     }
 
-    // Menggunakan RPC untuk menghindari masalah policy
+    // Using RPC to avoid policy issues
     const { data, error } = await supabase.rpc("update_report", {
       p_report_id: reportId,
       p_title: reportData.title,

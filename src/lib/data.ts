@@ -60,7 +60,30 @@ export async function canEditReport(userId: string, reportId: string): Promise<b
   }
 }
 
-// Fungsi untuk menghapus laporan
+// Function to get report location data
+export async function getReportLocationData(reportId: string): Promise<{
+  branch_id: string;
+  subdistrict_id: string;
+  city_id: string;
+} | null> {
+  try {
+    const { data, error } = await supabase.rpc("get_report_location_data", {
+      p_report_id: reportId,
+    });
+    
+    if (error) {
+      console.error("Error getting report location data:", error);
+      return null;
+    }
+    
+    return data;
+  } catch (error) {
+    console.error("Error in getReportLocationData:", error);
+    return null;
+  }
+}
+
+// Function to delete report
 export async function deleteReport(reportId: string) {
   const { error } = await supabase
     .from("reports")

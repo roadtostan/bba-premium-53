@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "@/components/AuthContext";
@@ -32,6 +33,7 @@ import {
   getReportById,
   updateReport,
   canEditReport,
+  getReportLocationData,
 } from "@/lib/data";
 import { id as idLocale } from "date-fns/locale";
 
@@ -159,6 +161,7 @@ export default function CreateReport() {
     fetchUserLocationData();
   }, [user]);
 
+  // Fetch report data if in edit mode
   useEffect(() => {
     const fetchReportData = async () => {
       if (isEditMode && id) {
@@ -180,10 +183,20 @@ export default function CreateReport() {
             branchManager: reportData?.branchManager ?? user?.name ?? "",
           });
 
-          // Importantly, set the IDs for location data
-          setBranchId(reportData?.branchId ?? "");
-          setSubdistrictId(reportData?.subdistrictId ?? "");
-          setCityId(reportData?.cityId ?? "");
+          // Get location IDs for the report
+          if (isEditMode && id) {
+            try {
+              const locationData = await getReportLocationData(id);
+              if (locationData) {
+                console.log("Setting location IDs:", locationData);
+                setBranchId(locationData.branch_id);
+                setSubdistrictId(locationData.subdistrict_id);
+                setCityId(locationData.city_id);
+              }
+            } catch (error) {
+              console.error("Error fetching report location IDs:", error);
+            }
+          }
 
           // Set product info
           setProductInfo({
@@ -228,6 +241,7 @@ export default function CreateReport() {
     fetchReportData();
   }, [isEditMode, id, user]);
 
+  // Calculate total expenses and income
   useEffect(() => {
     const totalExpenses =
       expenseInfo.employeeSalary +
@@ -265,6 +279,7 @@ export default function CreateReport() {
     incomeInfo.transferReceipts,
   ]);
 
+  // Calculate sold items based on other product info
   useEffect(() => {
     if (productInfo.initialStock >= productInfo.remainingStock) {
       const sold =
@@ -281,6 +296,7 @@ export default function CreateReport() {
     productInfo.rejects,
   ]);
 
+  // Check user permissions
   if (!user || (user.role !== "branch_user" && user.role !== "subdistrict_admin" && !isEditMode)) {
     navigate("/");
     return null;
@@ -375,7 +391,7 @@ export default function CreateReport() {
     setIsSubmitting(true);
 
     try {
-      // Determine status based on user role and current status
+      // Determine status based on user role and whether it's a draft
       let reportStatus: ReportStatus;
       if (saveAsDraft) {
         reportStatus = "draft";
@@ -387,9 +403,22 @@ export default function CreateReport() {
         reportStatus = "pending_subdistrict"; // Default
       }
 
-      // For subdistrict admin, ensure we're using the original report's location data
-      // and not trying to update them with potentially null values
       console.log("Current IDs before submit:", { branchId, subdistrictId, cityId });
+      
+      // For edit mode, ensure we're using the location IDs from the database
+      if (isEditMode && id) {
+        try {
+          const locationData = await getReportLocationData(id);
+          if (locationData) {
+            console.log("Using location IDs from database:", locationData);
+            setBranchId(locationData.branch_id);
+            setSubdistrictId(locationData.subdistrict_id);
+            setCityId(locationData.city_id);
+          }
+        } catch (error) {
+          console.error("Error fetching report location IDs:", error);
+        }
+      }
       
       // Prepare report data with the correct structure matching database columns
       const reportData = {
@@ -398,12 +427,12 @@ export default function CreateReport() {
         date: date?.toISOString().split("T")[0], // Format as YYYY-MM-DD
         status: reportStatus,
 
-        // Location IDs - use the values we have from the report data
+        // Location IDs - use the values we have
         branch_id: branchId,
         subdistrict_id: subdistrictId,
         city_id: cityId,
 
-        // Branch manager info - Use the original branch manager for the report
+        // Branch manager info
         branch_manager: isEditMode ? locationInfo.branchManager : user?.id || "",
 
         // Product information
@@ -461,15 +490,11 @@ export default function CreateReport() {
   };
 
   const isSubdistrictAdmin = user?.role === "subdistrict_admin";
+
+  // Subdistrict admins can now edit all fields
   const isFieldReadOnly = (field: string): boolean => {
-    // For subdistrict admins, only allow editing certain fields
-    if (isSubdistrictAdmin) {
-      if (field === "title" || field === "content") {
-        return false; // Subdistrict admins can edit these
-      }
-      return true; // Everything else is read-only
-    }
-    return false; // Branch users can edit all fields
+    // No fields should be read-only anymore
+    return false;
   };
 
   return (
@@ -486,8 +511,7 @@ export default function CreateReport() {
           {isSubdistrictAdmin && isEditMode && (
             <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
               <p className="text-blue-700">
-                Sebagai Admin Wilayah, Anda dapat mengedit judul dan konten laporan.
-                Data lainnya bersifat hanya baca.
+                Sebagai Admin Wilayah, Anda dapat mengedit semua bagian laporan ini.
               </p>
             </div>
           )}
