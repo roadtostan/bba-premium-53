@@ -297,6 +297,8 @@ export async function updateReport(reportId: string, reportData: any) {
       );
     }
 
+    console.log("Updating report with data:", reportData);
+
     // Menggunakan RPC untuk menghindari masalah policy
     const { data, error } = await supabase.rpc("update_report", {
       p_report_id: reportId,

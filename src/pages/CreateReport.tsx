@@ -23,7 +23,6 @@ import {
   IncomeInfo,
   OtherExpense,
   ReportStatus,
-  Report,
 } from "@/types";
 import {
   createReport,
@@ -32,6 +31,7 @@ import {
   getCities,
   getReportById,
   updateReport,
+  canEditReport,
 } from "@/lib/data";
 import { id as idLocale } from "date-fns/locale";
 
@@ -47,6 +47,8 @@ export default function CreateReport() {
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDraft, setIsDraft] = useState(false);
+  const [canEdit, setCanEdit] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Branch, subdistrict, and city data
   const [branchId, setBranchId] = useState("");
@@ -94,6 +96,35 @@ export default function CreateReport() {
     remainingIncome: 0,
     totalIncome: 0,
   });
+
+  // Check edit permission for the report
+  useEffect(() => {
+    const checkEditPermission = async () => {
+      if (isEditMode && id && user) {
+        try {
+          const hasPermission = await canEditReport(user.id, id);
+          console.log("Can edit report:", hasPermission);
+          setCanEdit(hasPermission);
+          
+          if (!hasPermission) {
+            toast.error("Anda tidak memiliki izin untuk mengedit laporan ini");
+            navigate("/");
+          }
+        } catch (error) {
+          console.error("Error checking edit permission:", error);
+          setCanEdit(false);
+        } finally {
+          setIsLoading(false);
+        }
+      } else {
+        // For new reports, only branch users can create
+        setCanEdit(user?.role === "branch_user");
+        setIsLoading(false);
+      }
+    };
+
+    checkEditPermission();
+  }, [id, user, isEditMode, navigate]);
 
   // Fetch branch, subdistrict, and city data for the user
   useEffect(() => {
@@ -237,7 +268,6 @@ export default function CreateReport() {
     incomeInfo.transferReceipts,
   ]);
 
-  // Calculate sales based on stock
   useEffect(() => {
     if (productInfo.initialStock >= productInfo.remainingStock) {
       const sold =
@@ -254,9 +284,17 @@ export default function CreateReport() {
     productInfo.rejects,
   ]);
 
-  if (!user || user.role !== "branch_user") {
+  if (!user || (user.role !== "branch_user" && user.role !== "subdistrict_admin" && !isEditMode)) {
     navigate("/");
     return null;
+  }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
   }
 
   const handleProductChange = (field: keyof ProductInfo, value: number) => {
@@ -364,20 +402,32 @@ export default function CreateReport() {
         }
       }
 
+      // Determine status based on user role and current status
+      let reportStatus: ReportStatus;
+      if (saveAsDraft) {
+        reportStatus = "draft";
+      } else if (user?.role === "branch_user") {
+        reportStatus = "pending_subdistrict";
+      } else if (user?.role === "subdistrict_admin") {
+        reportStatus = "pending_city";
+      } else {
+        reportStatus = "pending_subdistrict"; // Default
+      }
+
       // Prepare report data with the correct structure matching database columns
       const reportData = {
         title,
         content,
         date: date?.toISOString().split("T")[0], // Format as YYYY-MM-DD
-        status: (saveAsDraft ? "draft" : "pending_subdistrict") as ReportStatus,
+        status: reportStatus,
 
         // Location IDs - pastikan menggunakan nilai yang sudah diupdate
         branch_id: branchId,
         subdistrict_id: subdistrictId,
         city_id: cityId,
 
-        // Branch manager info - Use user ID for submission to database, but display name in UI
-        branch_manager: user?.id || "",
+        // Branch manager info - Use the original branch manager for the report
+        branch_manager: isEditMode ? locationInfo.branchManager : user?.id || "",
 
         // Product information
         initial_stock: productInfo.initialStock,
@@ -433,6 +483,18 @@ export default function CreateReport() {
     }
   };
 
+  const isSubdistrictAdmin = user?.role === "subdistrict_admin";
+  const isFieldReadOnly = (field: string): boolean => {
+    // For subdistrict admins, only allow editing certain fields
+    if (isSubdistrictAdmin) {
+      if (field === "title" || field === "content") {
+        return false; // Subdistrict admins can edit these
+      }
+      return true; // Everything else is read-only
+    }
+    return false; // Branch users can edit all fields
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900 animate-fadeIn">
       <NavBar />
@@ -444,6 +506,15 @@ export default function CreateReport() {
               : "Buat Laporan Penjualan Baru"}
           </h1>
 
+          {isSubdistrictAdmin && isEditMode && (
+            <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-blue-700">
+                Sebagai Admin Wilayah, Anda dapat mengedit judul dan konten laporan.
+                Data lainnya bersifat hanya baca.
+              </p>
+            </div>
+          )}
+
           <form onSubmit={(e) => handleSubmit(e, false)} className="space-y-8">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-4">
@@ -454,7 +525,8 @@ export default function CreateReport() {
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     placeholder="Laporan Penjualan Harian"
-                    className="mt-1"
+                    className={cn("mt-1", isFieldReadOnly("title") && "bg-gray-100")}
+                    readOnly={isFieldReadOnly("title")}
                   />
                 </div>
 
@@ -467,9 +539,9 @@ export default function CreateReport() {
                         className={cn(
                           "w-full mt-1 justify-start text-left font-normal",
                           !date && "text-muted-foreground",
-                          isEditMode && "bg-gray-100 cursor-not-allowed"
+                          (isEditMode || isFieldReadOnly("date")) && "bg-gray-100 cursor-not-allowed"
                         )}
-                        disabled={isEditMode}
+                        disabled={isEditMode || isFieldReadOnly("date")}
                       >
                         <CalendarIcon className="mr-2 h-4 w-4" />
                         {date ? (
@@ -479,7 +551,7 @@ export default function CreateReport() {
                         )}
                       </Button>
                     </PopoverTrigger>
-                    {!isEditMode && (
+                    {!isEditMode && !isFieldReadOnly("date") && (
                       <PopoverContent className="w-auto p-0" align="start">
                         <Calendar
                           mode="single"
@@ -502,7 +574,8 @@ export default function CreateReport() {
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
                   placeholder="Berikan ringkasan laporan Anda..."
-                  className="mt-1 h-24"
+                  className={cn("mt-1 h-24", isFieldReadOnly("content") && "bg-gray-100")}
+                  readOnly={isFieldReadOnly("content")}
                 />
               </div>
             </div>
@@ -544,7 +617,7 @@ export default function CreateReport() {
                   <Label htmlFor="branchManager">Penanggung Jawab Cabang</Label>
                   <Input
                     id="branchManager"
-                    value={user?.name || ""}
+                    value={isEditMode ? locationInfo.branchManager : user?.name || ""}
                     readOnly
                     className="mt-1 bg-gray-100"
                   />
@@ -572,7 +645,8 @@ export default function CreateReport() {
                       )
                     }
                     placeholder="0"
-                    className="mt-1"
+                    className={cn("mt-1", isFieldReadOnly("initialStock") && "bg-gray-100")}
+                    readOnly={isFieldReadOnly("initialStock")}
                   />
                 </div>
                 <div>
@@ -590,7 +664,8 @@ export default function CreateReport() {
                       )
                     }
                     placeholder="0"
-                    className="mt-1"
+                    className={cn("mt-1", isFieldReadOnly("remainingStock") && "bg-gray-100")}
+                    readOnly={isFieldReadOnly("remainingStock")}
                   />
                 </div>
                 <div>
@@ -605,7 +680,8 @@ export default function CreateReport() {
                       handleProductChange("testers", Number(e.target.value))
                     }
                     placeholder="0"
-                    className="mt-1"
+                    className={cn("mt-1", isFieldReadOnly("testers") && "bg-gray-100")}
+                    readOnly={isFieldReadOnly("testers")}
                   />
                 </div>
                 <div>
@@ -619,7 +695,8 @@ export default function CreateReport() {
                       handleProductChange("rejects", Number(e.target.value))
                     }
                     placeholder="0"
-                    className="mt-1"
+                    className={cn("mt-1", isFieldReadOnly("rejects") && "bg-gray-100")}
+                    readOnly={isFieldReadOnly("rejects")}
                   />
                 </div>
                 <div>
@@ -651,7 +728,8 @@ export default function CreateReport() {
                       )
                     }
                     placeholder="0"
-                    className="mt-1"
+                    className={cn("mt-1", isFieldReadOnly("employeeSalary") && "bg-gray-100")}
+                    readOnly={isFieldReadOnly("employeeSalary")}
                   />
                 </div>
                 <div>
@@ -668,7 +746,8 @@ export default function CreateReport() {
                       )
                     }
                     placeholder="0"
-                    className="mt-1"
+                    className={cn("mt-1", isFieldReadOnly("employeeBonus") && "bg-gray-100")}
+                    readOnly={isFieldReadOnly("employeeBonus")}
                   />
                 </div>
                 <div>
@@ -682,7 +761,8 @@ export default function CreateReport() {
                       handleExpenseChange("cookingOil", Number(e.target.value))
                     }
                     placeholder="0"
-                    className="mt-1"
+                    className={cn("mt-1", isFieldReadOnly("cookingOil") && "bg-gray-100")}
+                    readOnly={isFieldReadOnly("cookingOil")}
                   />
                 </div>
                 <div>
@@ -696,7 +776,8 @@ export default function CreateReport() {
                       handleExpenseChange("lpgGas", Number(e.target.value))
                     }
                     placeholder="0"
-                    className="mt-1"
+                    className={cn("mt-1", isFieldReadOnly("lpgGas") && "bg-gray-100")}
+                    readOnly={isFieldReadOnly("lpgGas")}
                   />
                 </div>
                 <div>
@@ -710,7 +791,8 @@ export default function CreateReport() {
                       handleExpenseChange("plasticBags", Number(e.target.value))
                     }
                     placeholder="0"
-                    className="mt-1"
+                    className={cn("mt-1", isFieldReadOnly("plasticBags") && "bg-gray-100")}
+                    readOnly={isFieldReadOnly("plasticBags")}
                   />
                 </div>
                 <div>
@@ -724,7 +806,8 @@ export default function CreateReport() {
                       handleExpenseChange("tissue", Number(e.target.value))
                     }
                     placeholder="0"
-                    className="mt-1"
+                    className={cn("mt-1", isFieldReadOnly("tissue") && "bg-gray-100")}
+                    readOnly={isFieldReadOnly("tissue")}
                   />
                 </div>
                 <div>
@@ -738,7 +821,8 @@ export default function CreateReport() {
                       handleExpenseChange("soap", Number(e.target.value))
                     }
                     placeholder="0"
-                    className="mt-1"
+                    className={cn("mt-1", isFieldReadOnly("soap") && "bg-gray-100")}
+                    readOnly={isFieldReadOnly("soap")}
                   />
                 </div>
               </div>
@@ -766,7 +850,8 @@ export default function CreateReport() {
                         )
                       }
                       placeholder="Deskripsi pengeluaran"
-                      className="mt-1"
+                      className={cn("mt-1", isFieldReadOnly(`expense-desc-${index}`) && "bg-gray-100")}
+                      readOnly={isFieldReadOnly(`expense-desc-${index}`)}
                     />
                   </div>
                   <div>
@@ -786,7 +871,8 @@ export default function CreateReport() {
                         )
                       }
                       placeholder="0"
-                      className="mt-1"
+                      className={cn("mt-1", isFieldReadOnly(`expense-amount-${index}`) && "bg-gray-100")}
+                      readOnly={isFieldReadOnly(`expense-amount-${index}`)}
                     />
                   </div>
                 </div>
@@ -819,7 +905,8 @@ export default function CreateReport() {
                       handleIncomeChange("cashReceipts", Number(e.target.value))
                     }
                     placeholder="0"
-                    className="mt-1"
+                    className={cn("mt-1", isFieldReadOnly("cashReceipts") && "bg-gray-100")}
+                    readOnly={isFieldReadOnly("cashReceipts")}
                   />
                 </div>
                 <div>
@@ -838,7 +925,8 @@ export default function CreateReport() {
                       )
                     }
                     placeholder="0"
-                    className="mt-1"
+                    className={cn("mt-1", isFieldReadOnly("transferReceipts") && "bg-gray-100")}
+                    readOnly={isFieldReadOnly("transferReceipts")}
                   />
                 </div>
                 <div className="md:col-span-2">
@@ -864,20 +952,22 @@ export default function CreateReport() {
             </div>
 
             <div className="flex justify-end space-x-4">
-              <Button
-                type="button"
-                variant="outline"
-                className="button-transition flex items-center gap-2"
-                onClick={(e) => handleSubmit(e, true)}
-                disabled={isSubmitting}
-              >
-                {isSubmitting && isDraft ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Save className="h-4 w-4" />
-                )}
-                Simpan Draf
-              </Button>
+              {user.role === "branch_user" && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="button-transition flex items-center gap-2"
+                  onClick={(e) => handleSubmit(e, true)}
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting && isDraft ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Save className="h-4 w-4" />
+                  )}
+                  Simpan Draf
+                </Button>
+              )}
 
               <Button
                 type="submit"
