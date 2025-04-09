@@ -70,7 +70,7 @@ export async function getReportLocationData(reportId: string): Promise<{
   try {
     console.log("Getting report location data for report:", reportId);
     
-    // Use a direct, simple query with no joins to avoid RLS recursion
+    // First, try the direct query approach
     const { data, error } = await supabase
       .from("reports")
       .select("branch_id, subdistrict_id, city_id")
@@ -78,11 +78,37 @@ export async function getReportLocationData(reportId: string): Promise<{
       .single();
     
     if (error) {
-      console.error("Error getting report location data:", error);
+      console.error("Error using direct query for location data:", error);
+      
+      // If direct query fails, try using RPC function as fallback
+      const { data: rpcData, error: rpcError } = await supabase.rpc("get_report_location_data_safe", {
+        p_report_id: reportId
+      });
+      
+      if (rpcError) {
+        console.error("Error using RPC for location data:", rpcError);
+        return null;
+      }
+      
+      if (!rpcData || !rpcData.branch_id) {
+        console.error("No location data retrieved from RPC");
+        return null;
+      }
+      
+      console.log("Location data retrieved via RPC:", rpcData);
+      return {
+        branch_id: rpcData.branch_id,
+        subdistrict_id: rpcData.subdistrict_id,
+        city_id: rpcData.city_id
+      };
+    }
+    
+    if (!data) {
+      console.error("No report found with ID:", reportId);
       return null;
     }
     
-    console.log("Location data retrieved:", data);
+    console.log("Location data retrieved via direct query:", data);
     return {
       branch_id: data.branch_id,
       subdistrict_id: data.subdistrict_id,

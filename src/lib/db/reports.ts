@@ -305,6 +305,20 @@ export async function updateReport(reportId: string, reportData: any) {
       }
     }
 
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+    if (userError) {
+      console.error("Error getting current user:", userError);
+    } else {
+      const { data: userRole, error: roleError } = await supabase.rpc("get_user_role", {
+        user_id: userData.user.id
+      });
+      
+      if (!roleError && userRole === 'subdistrict_admin' && reportData.status === 'pending_subdistrict') {
+        console.log("Subdistrict admin editing a pending_subdistrict report - updating status to pending_city");
+        reportData.status = 'pending_city';
+      }
+    }
+
     const { data, error } = await supabase.rpc("update_report", {
       p_report_id: reportId,
       p_title: reportData.title,

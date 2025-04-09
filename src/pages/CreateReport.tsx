@@ -194,7 +194,20 @@ export default function CreateReport() {
                 setCityId(locationData.city_id);
               } else {
                 console.error("Failed to retrieve location data for report");
-                toast.error("Gagal mengambil data lokasi laporan");
+                
+                // Fallback to using IDs from the report if available
+                if (reportData.branch_id && reportData.subdistrict_id && reportData.city_id) {
+                  console.log("Using location IDs from report data:", {
+                    branch_id: reportData.branch_id,
+                    subdistrict_id: reportData.subdistrict_id,
+                    city_id: reportData.city_id
+                  });
+                  setBranchId(reportData.branch_id);
+                  setSubdistrictId(reportData.subdistrict_id);
+                  setCityId(reportData.city_id);
+                } else {
+                  toast.error("Gagal mengambil data lokasi laporan");
+                }
               }
             } catch (error) {
               console.error("Error fetching report location IDs:", error);
@@ -402,7 +415,10 @@ export default function CreateReport() {
       } else if (user?.role === "branch_user") {
         reportStatus = "pending_subdistrict";
       } else if (user?.role === "subdistrict_admin") {
-        reportStatus = "pending_city";
+        // For subdistrict admin, if they're creating a new report, set to pending_city
+        // If they're editing an existing report with status pending_subdistrict, it will
+        // be changed to pending_city in the updateReport function
+        reportStatus = isEditMode ? "pending_subdistrict" : "pending_city";
       } else {
         reportStatus = "pending_subdistrict"; // Default
       }
@@ -422,11 +438,21 @@ export default function CreateReport() {
           if (locationData) {
             console.log("Using location IDs from database:", locationData);
             locationIds = locationData;
+          } else {
+            console.log("No location data returned from database, using current state values");
           }
         } catch (error) {
           console.error("Error fetching report location IDs:", error);
           // Continue with existing IDs if there's an error
         }
+      }
+      
+      // Extra validation to ensure we have location IDs
+      if (!locationIds.branch_id || !locationIds.subdistrict_id || !locationIds.city_id) {
+        console.error("Missing critical location IDs:", locationIds);
+        toast.error("Data lokasi tidak lengkap, mohon refresh halaman dan coba lagi");
+        setIsSubmitting(false);
+        return;
       }
       
       // Prepare report data with the correct structure matching database columns
