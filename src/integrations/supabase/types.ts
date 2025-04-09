@@ -454,6 +454,10 @@ export type Database = {
         Args: { p_report_id: string }
         Returns: Json
       }
+      get_report_location_data_safe: {
+        Args: { p_report_id: string }
+        Returns: Json
+      }
       get_user_data: {
         Args: { user_email: string }
         Returns: {
