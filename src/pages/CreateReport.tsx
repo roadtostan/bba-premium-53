@@ -183,7 +183,7 @@ export default function CreateReport() {
             branchManager: reportData?.branchManager ?? user?.name ?? "",
           });
 
-          // Get location IDs for the report
+          // Get location IDs for the report - crucial for edit mode
           if (isEditMode && id) {
             try {
               const locationData = await getReportLocationData(id);
@@ -192,6 +192,9 @@ export default function CreateReport() {
                 setBranchId(locationData.branch_id);
                 setSubdistrictId(locationData.subdistrict_id);
                 setCityId(locationData.city_id);
+              } else {
+                console.error("Failed to retrieve location data for report");
+                toast.error("Gagal mengambil data lokasi laporan");
               }
             } catch (error) {
               console.error("Error fetching report location IDs:", error);
@@ -407,17 +410,22 @@ export default function CreateReport() {
       console.log("Current IDs before submit:", { branchId, subdistrictId, cityId });
       
       // For edit mode, ensure we're using the location IDs from the database
+      let locationIds = {
+        branch_id: branchId,
+        subdistrict_id: subdistrictId,
+        city_id: cityId
+      };
+      
       if (isEditMode && id) {
         try {
           const locationData = await getReportLocationData(id);
           if (locationData) {
             console.log("Using location IDs from database:", locationData);
-            setBranchId(locationData.branch_id);
-            setSubdistrictId(locationData.subdistrict_id);
-            setCityId(locationData.city_id);
+            locationIds = locationData;
           }
         } catch (error) {
           console.error("Error fetching report location IDs:", error);
+          // Continue with existing IDs if there's an error
         }
       }
       
@@ -429,9 +437,9 @@ export default function CreateReport() {
         status: reportStatus,
 
         // Location IDs - use the values we have
-        branch_id: branchId,
-        subdistrict_id: subdistrictId,
-        city_id: cityId,
+        branch_id: locationIds.branch_id,
+        subdistrict_id: locationIds.subdistrict_id,
+        city_id: locationIds.city_id,
 
         // Branch manager info
         branch_manager: isEditMode ? locationInfo.branchManager : user?.id || "",

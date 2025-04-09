@@ -284,16 +284,16 @@ export async function updateReport(reportId: string, reportData: any) {
     if (!reportData.branch_id || !reportData.subdistrict_id || !reportData.city_id) {
       console.log("Missing location IDs, fetching from original report");
       
-      const { getReportLocationData } = await import('@/lib/data');
-      
       try {
+        const { getReportLocationData } = await import('@/lib/data');
+        
         const locationData = await getReportLocationData(reportId);
         
         if (locationData) {
           console.log("Retrieved location data:", locationData);
-          reportData.branch_id = locationData.branch_id;
-          reportData.subdistrict_id = locationData.subdistrict_id;
-          reportData.city_id = locationData.city_id;
+          reportData.branch_id = reportData.branch_id || locationData.branch_id;
+          reportData.subdistrict_id = reportData.subdistrict_id || locationData.subdistrict_id;
+          reportData.city_id = reportData.city_id || locationData.city_id;
         } else {
           throw new Error(
             "Data lokasi tidak lengkap. Pastikan branch_id, subdistrict_id, dan city_id tersedia."

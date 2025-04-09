@@ -60,14 +60,17 @@ export async function canEditReport(userId: string, reportId: string): Promise<b
   }
 }
 
-// Function to get report location data
+// Function to get report location data - using a direct query instead of RPC
+// to avoid infinite recursion in RLS policies
 export async function getReportLocationData(reportId: string): Promise<{
   branch_id: string;
   subdistrict_id: string;
   city_id: string;
 } | null> {
   try {
-    // Use a direct query with no joins to avoid RLS recursion
+    console.log("Getting report location data for report:", reportId);
+    
+    // Use a direct, simple query with no joins to avoid RLS recursion
     const { data, error } = await supabase
       .from("reports")
       .select("branch_id, subdistrict_id, city_id")
@@ -79,6 +82,7 @@ export async function getReportLocationData(reportId: string): Promise<{
       return null;
     }
     
+    console.log("Location data retrieved:", data);
     return {
       branch_id: data.branch_id,
       subdistrict_id: data.subdistrict_id,
