@@ -508,14 +508,6 @@ export default function CreateReport() {
               : "Buat Laporan Penjualan Baru"}
           </h1>
 
-          {isSubdistrictAdmin && isEditMode && (
-            <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-              <p className="text-blue-700">
-                Sebagai Admin Wilayah, Anda dapat mengedit semua bagian laporan ini.
-              </p>
-            </div>
-          )}
-
           <form onSubmit={(e) => handleSubmit(e, false)} className="space-y-8">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-4">
@@ -953,7 +945,7 @@ export default function CreateReport() {
             </div>
 
             <div className="flex justify-end space-x-4">
-              {user.role === "branch_user" && (
+              {/* {user.role === "branch_user" && (
                 <Button
                   type="button"
                   variant="outline"
@@ -968,7 +960,7 @@ export default function CreateReport() {
                   )}
                   Simpan Draf
                 </Button>
-              )}
+              )} */}
 
               <Button
                 type="submit"

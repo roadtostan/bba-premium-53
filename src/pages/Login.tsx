@@ -50,6 +50,11 @@ export default function Login() {
       email: "city@bolabolaayam.com",
       password: "city",
     },
+    {
+      role: "Super Admin",
+      email: "prasetyofmalik@gmail.com",
+      password: "password123",
+    },
   ];
 
   const setDemoLogin = (email: string, password: string) => {
@@ -60,6 +65,7 @@ export default function Login() {
   return (
     <div className="min-h-screen flex flex-col justify-center py-12 sm:px-6 lg:px-8 animate-fadeIn">
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
+        {/* <img src="bba-premium-logo.png" alt="logo" /> */}
         <h2 className="mt-2 text-2xl font-bold text-gray-900 dark:text-gray-100">
           Laporan Penjualan
         </h2>

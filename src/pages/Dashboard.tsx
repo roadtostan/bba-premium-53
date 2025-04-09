@@ -249,19 +249,19 @@ export default function Dashboard() {
                     >
                       Semua
                     </TabsTrigger>
-                    {user.role === "branch_user" && (
+                    {/* {user.role === "branch_user" && (
                       <TabsTrigger
                         value="draft"
                         className="data-[state=active]:border-b-2 data-[state=active]:border-primary whitespace-nowrap"
                       >
                         Draf
                       </TabsTrigger>
-                    )}
+                    )} */}
                     <TabsTrigger
                       value="pending"
                       className="data-[state=active]:border-b-2 data-[state=active]:border-primary whitespace-nowrap"
                     >
-                      Tunggu
+                      Menunggu
                     </TabsTrigger>
                     <TabsTrigger
                       value="approved"

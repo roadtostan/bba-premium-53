@@ -66,13 +66,13 @@ export default function ReportCard({
       case "pending_subdistrict":
         return (
           <Badge variant="outline" className="status-badge status-pending">
-            Menunggu Wilayah
+            Tunggu Wilayah
           </Badge>
         );
       case "pending_city":
         return (
           <Badge variant="outline" className="status-badge status-pending">
-            Menunggu Kota
+            Tunggu Kota
           </Badge>
         );
       case "approved":
