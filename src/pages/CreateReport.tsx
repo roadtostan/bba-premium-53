@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "@/components/AuthContext";
@@ -196,15 +195,15 @@ export default function CreateReport() {
                 console.error("Failed to retrieve location data for report");
                 
                 // Fallback to using IDs from the report if available
-                if (reportData.branch_id && reportData.subdistrict_id && reportData.city_id) {
+                if (reportData.branchId && reportData.subdistrictId && reportData.cityId) {
                   console.log("Using location IDs from report data:", {
-                    branch_id: reportData.branch_id,
-                    subdistrict_id: reportData.subdistrict_id,
-                    city_id: reportData.city_id
+                    branchId: reportData.branchId,
+                    subdistrictId: reportData.subdistrictId,
+                    cityId: reportData.cityId
                   });
-                  setBranchId(reportData.branch_id);
-                  setSubdistrictId(reportData.subdistrict_id);
-                  setCityId(reportData.city_id);
+                  setBranchId(reportData.branchId);
+                  setSubdistrictId(reportData.subdistrictId);
+                  setCityId(reportData.cityId);
                 } else {
                   toast.error("Gagal mengambil data lokasi laporan");
                 }

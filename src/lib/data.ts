@@ -60,13 +60,16 @@ export async function canEditReport(userId: string, reportId: string): Promise<b
   }
 }
 
-// Function to get report location data - using a direct query instead of RPC
-// to avoid infinite recursion in RLS policies
-export async function getReportLocationData(reportId: string): Promise<{
+// Type definition for the location data response
+interface ReportLocationData {
   branch_id: string;
   subdistrict_id: string;
   city_id: string;
-} | null> {
+}
+
+// Function to get report location data - using a direct query instead of RPC
+// to avoid infinite recursion in RLS policies
+export async function getReportLocationData(reportId: string): Promise<ReportLocationData | null> {
   try {
     console.log("Getting report location data for report:", reportId);
     
@@ -81,6 +84,7 @@ export async function getReportLocationData(reportId: string): Promise<{
       console.error("Error using direct query for location data:", error);
       
       // If direct query fails, try using RPC function as fallback
+      // Directly access the jsonb object returned by the function
       const { data: rpcData, error: rpcError } = await supabase.rpc("get_report_location_data_safe", {
         p_report_id: reportId
       });
@@ -90,17 +94,21 @@ export async function getReportLocationData(reportId: string): Promise<{
         return null;
       }
       
-      if (!rpcData || !rpcData.branch_id) {
-        console.error("No location data retrieved from RPC");
+      // Validate the returned data
+      if (!rpcData || typeof rpcData !== 'object') {
+        console.error("Invalid data returned from RPC:", rpcData);
         return null;
       }
       
-      console.log("Location data retrieved via RPC:", rpcData);
-      return {
-        branch_id: rpcData.branch_id,
-        subdistrict_id: rpcData.subdistrict_id,
-        city_id: rpcData.city_id
-      };
+      const locationData = rpcData as ReportLocationData;
+      
+      if (!locationData.branch_id) {
+        console.error("No branch_id in location data from RPC:", locationData);
+        return null;
+      }
+      
+      console.log("Location data retrieved via RPC:", locationData);
+      return locationData;
     }
     
     if (!data) {
@@ -109,11 +117,7 @@ export async function getReportLocationData(reportId: string): Promise<{
     }
     
     console.log("Location data retrieved via direct query:", data);
-    return {
-      branch_id: data.branch_id,
-      subdistrict_id: data.subdistrict_id,
-      city_id: data.city_id
-    };
+    return data as ReportLocationData;
   } catch (error) {
     console.error("Error in getReportLocationData:", error);
     return null;
