@@ -1,7 +1,82 @@
 
-// Export all functions from their respective modules
-export * from "./auth";
-export * from "./users";
-export * from "./reports";
-export * from "./locations";
-export * from "./utils";
+import { getCurrentUser, signInWithEmail, signOut } from "./auth";
+import {
+  getUsers,
+  getUserById,
+  updateUser,
+  deleteUser,
+  findUserByEmail,
+} from "./users";
+import {
+  getCities,
+  createCity,
+  updateCity,
+  deleteCity,
+  getSubdistricts,
+  createSubdistrict,
+  updateSubdistrict,
+  deleteSubdistrict,
+  getBranches,
+  createBranch,
+  updateBranch,
+  deleteBranch,
+} from "./locations";
+import {
+  getReports,
+  getReportById,
+  getReportsByUser,
+  getReportsByStatus,
+  canCreateNewReport,
+  createReport,
+  updateReport,
+  getPendingActionReports,
+  addReportComment,
+  approveReport,
+  rejectReport,
+} from "./reports";
+
+import { testSupabaseConnection } from "./utils";
+
+export {
+  // Auth
+  getCurrentUser,
+  signInWithEmail,
+  signOut,
+  
+  // Users
+  getUsers,
+  getUserById,
+  updateUser,
+  deleteUser,
+  findUserByEmail,
+  
+  // Locations
+  getCities,
+  createCity,
+  updateCity,
+  deleteCity,
+  getSubdistricts,
+  createSubdistrict,
+  updateSubdistrict,
+  deleteSubdistrict,
+  getBranches,
+  createBranch,
+  updateBranch,
+  deleteBranch,
+  
+  // Reports
+  getReports,
+  getReportById,
+  getReportsByUser,
+  getReportsByStatus,
+  canCreateNewReport,
+  createReport,
+  updateReport,
+  getPendingActionReports,
+  addReportComment,
+  approveReport,
+  rejectReport,
+  
+  // Utils
+  testSupabaseConnection,
+};

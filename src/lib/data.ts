@@ -125,14 +125,77 @@ export async function getReportLocationData(reportId: string): Promise<ReportLoc
   }
 }
 
+// Function to check if a user can delete a specific report
+export async function canDeleteReport(userId: string, reportId: string): Promise<boolean> {
+  try {
+    console.log("Checking delete permissions for report:", reportId, "and user:", userId);
+    
+    // First get user role
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+    if (userError) {
+      console.error("Error getting current user:", userError);
+      return false;
+    }
+    
+    const { data: userRole, error: roleError } = await supabase.rpc("get_user_role", {
+      user_id: userData.user.id
+    });
+    
+    if (roleError) {
+      console.error("Error getting user role:", roleError);
+      return false;
+    }
+    
+    // Super admin can delete any report
+    if (userRole === 'super_admin') {
+      return true;
+    }
+    
+    // If user is subdistrict_admin, check report status
+    if (userRole === 'subdistrict_admin') {
+      const { data: report, error: reportError } = await supabase
+        .from("reports")
+        .select("status")
+        .eq("id", reportId)
+        .single();
+      
+      if (reportError) {
+        console.error("Error getting report status:", reportError);
+        return false;
+      }
+      
+      // Subdistrict admin can't delete approved reports
+      return report.status !== 'approved';
+    }
+    
+    // For other roles, use the can_edit_report function as a base permission check
+    // This ensures branch users can only delete their own reports in draft/rejected status
+    return await canEditReport(userId, reportId);
+  } catch (error) {
+    console.error("Error in canDeleteReport:", error);
+    return false;
+  }
+}
+
 // Function to delete report
 export async function deleteReport(reportId: string) {
-  const { error } = await supabase
-    .from("reports")
-    .delete()
-    .eq("id", reportId);
+  try {
+    console.log("Attempting to delete report:", reportId);
+    
+    const { error } = await supabase
+      .from("reports")
+      .delete()
+      .eq("id", reportId);
 
-  if (error) {
-    throw new Error("Gagal menghapus laporan: " + error.message);
+    if (error) {
+      console.error("Error deleting report:", error);
+      throw new Error("Gagal menghapus laporan: " + error.message);
+    }
+    
+    console.log("Report deleted successfully:", reportId);
+    return { success: true };
+  } catch (error) {
+    console.error("Exception in deleteReport:", error);
+    throw error;
   }
 }
