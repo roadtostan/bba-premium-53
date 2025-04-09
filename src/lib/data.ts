@@ -100,7 +100,8 @@ export async function getReportLocationData(reportId: string): Promise<ReportLoc
         return null;
       }
       
-      const locationData = rpcData as ReportLocationData;
+      // Safely type cast the data
+      const locationData = rpcData as unknown as ReportLocationData;
       
       if (!locationData.branch_id) {
         console.error("No branch_id in location data from RPC:", locationData);

@@ -12,7 +12,18 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { CalendarIcon, Loader2, Save, Send } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { CalendarIcon, Loader2, Save, Send, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -33,6 +44,7 @@ import {
   updateReport,
   canEditReport,
   getReportLocationData,
+  deleteReport,
 } from "@/lib/data";
 import { id as idLocale } from "date-fns/locale";
 
@@ -47,6 +59,7 @@ export default function CreateReport() {
   const [content, setContent] = useState("");
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [isDraft, setIsDraft] = useState(false);
   const [canEdit, setCanEdit] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -391,6 +404,22 @@ export default function CreateReport() {
     }
 
     return true;
+  };
+
+  const handleDeleteReport = async () => {
+    if (!id) return;
+    
+    try {
+      setIsDeleting(true);
+      await deleteReport(id);
+      toast.success("Laporan berhasil dihapus");
+      navigate("/");
+    } catch (error) {
+      console.error("Error deleting report:", error);
+      toast.error("Gagal menghapus laporan: " + (error as Error).message);
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const handleSubmit = async (
@@ -978,28 +1007,48 @@ export default function CreateReport() {
               </div>
             </div>
 
-            <div className="flex justify-end space-x-4">
-              {/* {user.role === "branch_user" && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="button-transition flex items-center gap-2"
-                  onClick={(e) => handleSubmit(e, true)}
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting && isDraft ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Save className="h-4 w-4" />
-                  )}
-                  Simpan Draf
-                </Button>
-              )} */}
+            <div className="flex justify-between">
+              {isEditMode && (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      className="button-transition flex items-center gap-2"
+                      disabled={isDeleting || isSubmitting}
+                    >
+                      {isDeleting ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-4 w-4" />
+                      )}
+                      Hapus
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Konfirmasi Penghapusan</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Apakah Anda yakin ingin menghapus laporan ini? Tindakan ini tidak dapat dibatalkan.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Batal</AlertDialogCancel>
+                      <AlertDialogAction
+                        className="bg-red-500 hover:bg-red-600"
+                        onClick={handleDeleteReport}
+                      >
+                        Hapus
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
 
               <Button
                 type="submit"
                 className="button-transition button-hover flex items-center gap-2"
-                disabled={isSubmitting}
+                disabled={isSubmitting || isDeleting}
               >
                 {isSubmitting && !isDraft ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
