@@ -195,6 +195,7 @@ export default function CreateReport() {
               }
             } catch (error) {
               console.error("Error fetching report location IDs:", error);
+              toast.error("Gagal mengambil data lokasi laporan");
             }
           }
 

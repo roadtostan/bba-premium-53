@@ -2,13 +2,12 @@ import { supabase } from "@/lib/supabase";
 import type { Report, ReportStatus } from "@/types";
 import { getReportLocationData } from "@/lib/data";
 
-// Fungsi helper untuk transformasi data
 function transformReportData(report: any): Report {
-  console.log("Raw report data:", report); // Tambahkan log untuk melihat data mentah
+  console.log("Raw report data:", report);
 
   return {
     ...report,
-    totalSales: Number(report.total_income) || 0, // Gunakan total_income sebagai totalSales
+    totalSales: Number(report.total_income) || 0,
     branchName: report.branch_name,
     subdistrictName: report.subdistrict_name,
     cityName: report.city_name,
@@ -49,7 +48,6 @@ function transformReportData(report: any): Report {
   };
 }
 
-// Fungsi untuk mendapatkan reports dengan filter
 export async function getReports(filters?: {
   branchId?: string;
   subdistrictId?: string;
@@ -100,10 +98,8 @@ export async function getReports(filters?: {
   return reports.map(transformReportData);
 }
 
-// Fungsi untuk mendapatkan single report by ID
 export async function getReportById(reportId: string) {
   try {
-    // Get report data from RPC
     const { data: report, error: reportError } = await supabase.rpc(
       "get_report_detail",
       {
@@ -120,7 +116,6 @@ export async function getReportById(reportId: string) {
       throw new Error("Report not found");
     }
 
-    // Get comments using RPC to avoid infinite recursion
     const { data: comments, error: commentsError } = await supabase.rpc(
       "get_report_comments",
       {
@@ -133,7 +128,6 @@ export async function getReportById(reportId: string) {
       throw commentsError;
     }
 
-    // Transform report data and include comments
     const transformedReport = transformReportData({
       ...report,
       comments: comments || [],
@@ -158,7 +152,7 @@ export async function getReportsByUser(userId: string) {
       throw error;
     }
 
-    console.log("Raw user reports data:", reports); // Tambahkan log ini
+    console.log("Raw user reports data:", reports);
     return (reports || []).map(transformReportData);
   } catch (error) {
     console.error("Error in getReportsByUser:", error);
@@ -173,7 +167,6 @@ export const getReportsByStatus = async (
   return (await getReportsByUser(userId)).filter((r) => r.status === status);
 };
 
-// Update fungsi canCreateNewReport untuk menggunakan checkCanCreateReport
 export async function canCreateNewReport(userId: string): Promise<boolean> {
   try {
     return await checkCanCreateReport(userId);
@@ -183,10 +176,8 @@ export async function canCreateNewReport(userId: string): Promise<boolean> {
   }
 }
 
-// Fungsi untuk mengecek apakah user bisa membuat laporan baru
 export async function checkCanCreateReport(userId: string): Promise<boolean> {
   try {
-    // Menggunakan RPC untuk menghindari masalah policy
     const { data, error } = await supabase.rpc("check_can_create_report", {
       p_user_id: userId,
     });
@@ -203,7 +194,6 @@ export async function checkCanCreateReport(userId: string): Promise<boolean> {
   }
 }
 
-// Update fungsi canEditReport untuk menggunakan RPC
 export async function canEditReport(
   userId: string,
   reportId: string
@@ -211,7 +201,6 @@ export async function canEditReport(
   try {
     console.log(`Checking edit permissions for report ${reportId} and user ${userId}`);
     
-    // Using an RPC call to check if user can edit this report
     const { data, error } = await supabase.rpc("can_edit_report", {
       p_user_id: userId,
       p_report_id: reportId,
@@ -232,7 +221,6 @@ export async function canEditReport(
 
 export async function createReport(reportData: any) {
   try {
-    // Ensure we have required location IDs
     if (
       !reportData.branch_id ||
       !reportData.subdistrict_id ||
@@ -243,7 +231,6 @@ export async function createReport(reportData: any) {
       );
     }
 
-    // Menggunakan RPC untuk menghindari masalah policy
     const { data, error } = await supabase.rpc("create_report", {
       p_title: reportData.title,
       p_content: reportData.content,
@@ -294,25 +281,13 @@ export async function updateReport(reportId: string, reportData: any) {
       city_id: reportData.city_id
     });
 
-    // Check if we have location IDs and get them if missing
     if (!reportData.branch_id || !reportData.subdistrict_id || !reportData.city_id) {
       console.log("Missing location IDs, fetching from original report");
       
+      const { getReportLocationData } = await import('@/lib/data');
+      
       try {
-        // Using a direct query with auth.uid() instead of involving user policies
-        // This avoids the infinite recursion issue
-        const { data: locationData, error: locationError } = await supabase
-          .from("reports")
-          .select("branch_id, subdistrict_id, city_id")
-          .eq("id", reportId)
-          .single();
-        
-        if (locationError) {
-          console.error("Error fetching location data:", locationError);
-          throw new Error(
-            "Data lokasi tidak lengkap. Pastikan branch_id, subdistrict_id, dan city_id tersedia."
-          );
-        }
+        const locationData = await getReportLocationData(reportId);
         
         if (locationData) {
           console.log("Retrieved location data:", locationData);
@@ -330,7 +305,6 @@ export async function updateReport(reportId: string, reportData: any) {
       }
     }
 
-    // Using RPC to avoid policy issues
     const { data, error } = await supabase.rpc("update_report", {
       p_report_id: reportId,
       p_title: reportData.title,
@@ -373,7 +347,6 @@ export async function updateReport(reportId: string, reportData: any) {
   }
 }
 
-// Update fungsi getPendingActionReports untuk menggunakan RPC
 export async function getPendingActionReports(userId: string) {
   try {
     const { data: reports, error } = await supabase.rpc(
@@ -388,7 +361,7 @@ export async function getPendingActionReports(userId: string) {
       return [];
     }
 
-    console.log("Raw pending reports data:", reports); // Tambahkan log ini
+    console.log("Raw pending reports data:", reports);
     return (reports || []).map(transformReportData);
   } catch (error) {
     console.error("Error in getPendingActionReports:", error);
@@ -396,13 +369,11 @@ export async function getPendingActionReports(userId: string) {
   }
 }
 
-// Function to approve a report
 export async function approveReport(
   reportId: string,
   currentStatus: ReportStatus
 ) {
   try {
-    // Determine the next status based on current status
     let newStatus: ReportStatus;
 
     if (currentStatus === "pending_subdistrict") {
@@ -413,7 +384,6 @@ export async function approveReport(
       throw new Error("Report cannot be approved from its current status");
     }
 
-    // Menggunakan RPC untuk menghindari masalah policy
     const { data, error } = await supabase.rpc("approve_report", {
       p_report_id: reportId,
       p_new_status: newStatus,
@@ -431,10 +401,8 @@ export async function approveReport(
   }
 }
 
-// Function to reject a report
 export async function rejectReport(reportId: string, reason: string) {
   try {
-    // Menggunakan RPC untuk menghindari masalah policy
     const { data, error } = await supabase.rpc("reject_report", {
       p_report_id: reportId,
       p_rejection_reason: reason,
@@ -445,7 +413,6 @@ export async function rejectReport(reportId: string, reason: string) {
       throw error;
     }
 
-    // Transform data sebelum dikembalikan
     return transformReportData(data);
   } catch (error) {
     console.error("Error in rejectReport:", error);
@@ -453,7 +420,6 @@ export async function rejectReport(reportId: string, reason: string) {
   }
 }
 
-// Fungsi untuk menambah komentar pada report
 export async function addReportComment(
   reportId: string,
   userId: string,
