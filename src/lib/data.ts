@@ -77,9 +77,13 @@ export async function canEditReport(userId: string, reportId: string): Promise<b
       }
       
       // Subdistrict admin cannot edit approved reports
+      // But should be able to edit rejected reports to resubmit them
       if (report.status === 'approved') {
         return false;
       }
+      
+      // For rejected or pending reports, return true
+      return true;
     }
     
     // For other cases, use the can_edit_report RPC function
