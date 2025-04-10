@@ -42,7 +42,47 @@ export async function canEditReport(userId: string, reportId: string): Promise<b
   try {
     console.log("Checking edit permissions via RPC for report:", reportId, "and user:", userId);
     
-    // Using the RPC function we created in Supabase
+    // Get the user's role first
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+    if (userError) {
+      console.error("Error getting current user:", userError);
+      return false;
+    }
+    
+    const { data: userRole, error: roleError } = await supabase.rpc("get_user_role", {
+      user_id: userData.user.id
+    });
+    
+    if (roleError) {
+      console.error("Error getting user role:", roleError);
+      return false;
+    }
+    
+    // Super admin can edit any report
+    if (userRole === 'super_admin') {
+      return true;
+    }
+    
+    // For subdistrict_admin, check if report is approved
+    if (userRole === 'subdistrict_admin') {
+      const { data: report, error: reportError } = await supabase
+        .from("reports")
+        .select("status")
+        .eq("id", reportId)
+        .single();
+      
+      if (reportError) {
+        console.error("Error getting report status:", reportError);
+        return false;
+      }
+      
+      // Subdistrict admin cannot edit approved reports
+      if (report.status === 'approved') {
+        return false;
+      }
+    }
+    
+    // For other cases, use the can_edit_report RPC function
     const { data, error } = await supabase.rpc("can_edit_report", {
       p_user_id: userId,
       p_report_id: reportId,
