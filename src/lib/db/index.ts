@@ -33,6 +33,7 @@ import {
   addReportComment,
   approveReport,
   rejectReport,
+  canEditReport,
 } from "./reports";
 
 import { testSupabaseConnection } from "./utils";
@@ -76,6 +77,7 @@ export {
   addReportComment,
   approveReport,
   rejectReport,
+  canEditReport,
   
   // Utils
   testSupabaseConnection,

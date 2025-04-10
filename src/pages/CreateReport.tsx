@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/components/AuthContext";
-import Layout from "@/components/Layout";
+import { Layout } from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -73,6 +73,13 @@ type ExpenseItem = {
   amount: number;
 };
 
+// Fixed to match OtherExpense interface
+type OtherExpense = {
+  id: string;
+  description: string;
+  amount: number;
+};
+
 const CreateReport = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -112,7 +119,7 @@ const CreateReport = () => {
   const [plasticBags, setPlasticBags] = useState(0);
   const [tissue, setTissue] = useState(0);
   const [soap, setSoap] = useState(0);
-  const [otherExpenses, setOtherExpenses] = useState<ExpenseItem[]>([]);
+  const [otherExpenses, setOtherExpenses] = useState<OtherExpense[]>([]);
 
   // Income states
   const [cashReceipts, setCashReceipts] = useState(0);
@@ -193,17 +200,19 @@ const CreateReport = () => {
           setPlasticBags(report.expenseInfo.plasticBags);
           setTissue(report.expenseInfo.tissue);
           setSoap(report.expenseInfo.soap);
+          
+          // Fixed: setting otherExpenses to match the state type
           setOtherExpenses(report.expenseInfo.otherExpenses || []);
           
           // Set income info
           setCashReceipts(report.incomeInfo.cashReceipts);
           setTransferReceipts(report.incomeInfo.transferReceipts);
           
-          // Handle location data
-          if (report.branch_id && report.subdistrict_id && report.city_id) {
-            setCityId(report.city_id);
-            setSubdistrictId(report.subdistrict_id);
-            setBranchId(report.branch_id);
+          // Handle location data - fixing property names from snake_case to camelCase
+          if (report.branchId && report.subdistrictId && report.cityId) {
+            setCityId(report.cityId);
+            setSubdistrictId(report.subdistrictId);
+            setBranchId(report.branchId);
           } else if (report.branchId && report.subdistrictId && report.cityId) {
             setCityId(report.cityId);
             setSubdistrictId(report.subdistrictId);
@@ -219,18 +228,18 @@ const CreateReport = () => {
             }
           }
           
-          if (report.city_id) {
-            setCityId(report.city_id);
-            await loadSubdistricts(report.city_id);
+          if (report.cityId) {
+            setCityId(report.cityId);
+            await loadSubdistricts(report.cityId);
           }
       
-          if (report.subdistrict_id) {
-            setSubdistrictId(report.subdistrict_id);
-            await loadBranches(report.subdistrict_id);
+          if (report.subdistrictId) {
+            setSubdistrictId(report.subdistrictId);
+            await loadBranches(report.subdistrictId);
           }
       
-          if (report.branch_id) {
-            setBranchId(report.branch_id);
+          if (report.branchId) {
+            setBranchId(report.branchId);
           }
         } else {
           if (user) {
@@ -721,60 +730,60 @@ const CreateReport = () => {
           </Card>
           
           {/* Form actions at the bottom */}
-            <div className="flex justify-between">
-              {isEditMode && canDelete && (
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      className="button-transition flex items-center gap-2"
-                      disabled={isDeleting || isSubmitting}
+          <div className="flex justify-between">
+            {isEditMode && canDelete && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    className="button-transition flex items-center gap-2"
+                    disabled={isDeleting || isSubmitting}
+                  >
+                    {isDeleting ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Trash2 className="h-4 w-4" />
+                    )}
+                    Hapus
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Konfirmasi Penghapusan</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Apakah Anda yakin ingin menghapus laporan ini? Tindakan ini tidak dapat dibatalkan.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Batal</AlertDialogCancel>
+                    <AlertDialogAction
+                      className="bg-red-500 hover:bg-red-600"
+                      onClick={handleDeleteReport}
                     >
-                      {isDeleting ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Trash2 className="h-4 w-4" />
-                      )}
                       Hapus
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Konfirmasi Penghapusan</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Apakah Anda yakin ingin menghapus laporan ini? Tindakan ini tidak dapat dibatalkan.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Batal</AlertDialogCancel>
-                      <AlertDialogAction
-                        className="bg-red-500 hover:bg-red-600"
-                        onClick={handleDeleteReport}
-                      >
-                        Hapus
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              )}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
 
-              <div className={isEditMode && canDelete ? "" : "ml-auto"}>
-                <Button
-                  type="submit"
-                  className="button-transition button-hover flex items-center gap-2"
-                  disabled={isSubmitting || isDeleting}
-                >
-                  {isSubmitting && !isDraft ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Send className="h-4 w-4" />
-                  )}
-                  {isEditMode ? "Update Laporan" : "Kirim Laporan"}
-                </Button>
-              </div>
+            <div className={isEditMode && canDelete ? "" : "ml-auto"}>
+              <Button
+                type="submit"
+                className="button-transition button-hover flex items-center gap-2"
+                disabled={isSubmitting || isDeleting}
+              >
+                {isSubmitting && !isDraft ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
+                {isEditMode ? "Update Laporan" : "Kirim Laporan"}
+              </Button>
             </div>
-          </form>
+          </div>
+        </form>
       </div>
     </Layout>
   );

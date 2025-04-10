@@ -1,5 +1,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
+import { Json } from "@/integrations/supabase/types";
 
 export {
   getUsers,
@@ -83,32 +84,27 @@ export async function getReportLocationData(reportId: string): Promise<ReportLoc
     if (error) {
       console.error("Error using direct query for location data:", error);
       
-      // If direct query fails, try using RPC function as fallback
-      // Directly access the jsonb object returned by the function
-      const { data: rpcData, error: rpcError } = await supabase.rpc("get_report_location_data_safe", {
-        p_report_id: reportId
-      });
+      // If direct query fails, try using a safer approach 
+      // We no longer use RPC since it's causing type issues
+      const { data: reportData, error: reportError } = await supabase
+        .from("reports")
+        .select("branch_id, subdistrict_id, city_id")
+        .eq("id", reportId)
+        .single();
       
-      if (rpcError) {
-        console.error("Error using RPC for location data:", rpcError);
+      if (reportError) {
+        console.error("Error getting report location data:", reportError);
         return null;
       }
       
-      // Validate the returned data
-      if (!rpcData || typeof rpcData !== 'object') {
-        console.error("Invalid data returned from RPC:", rpcData);
-        return null;
-      }
+      // Convert to our expected type
+      const locationData: ReportLocationData = {
+        branch_id: reportData.branch_id,
+        subdistrict_id: reportData.subdistrict_id,
+        city_id: reportData.city_id
+      };
       
-      // Safely type cast the data
-      const locationData = rpcData as unknown as ReportLocationData;
-      
-      if (!locationData.branch_id) {
-        console.error("No branch_id in location data from RPC:", locationData);
-        return null;
-      }
-      
-      console.log("Location data retrieved via RPC:", locationData);
+      console.log("Location data retrieved via alternative method:", locationData);
       return locationData;
     }
     

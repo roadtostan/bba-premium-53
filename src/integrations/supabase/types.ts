@@ -393,6 +393,10 @@ export type Database = {
         Args: { p_user_id: string }
         Returns: boolean
       }
+      can_delete_report: {
+        Args: { p_user_id: string; p_report_id: string }
+        Returns: boolean
+      }
       can_edit_report: {
         Args: { p_user_id: string; p_report_id: string }
         Returns: boolean
