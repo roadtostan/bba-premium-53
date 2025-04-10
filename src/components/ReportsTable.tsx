@@ -27,9 +27,9 @@ const getStatusBadge = (status: ReportStatus) => {
     case "pending_subdistrict":
       return <Badge variant="secondary">Menunggu Subdistrict</Badge>;
     case "pending_city":
-      return <Badge variant="warning">Menunggu City</Badge>;
+      return <Badge variant="default">Menunggu City</Badge>;
     case "approved":
-      return <Badge variant="success">Disetujui</Badge>;
+      return <Badge variant="outline" className="border-green-500 text-green-500">Disetujui</Badge>;
     case "rejected":
       return <Badge variant="destructive">Ditolak</Badge>;
     default:
@@ -116,7 +116,7 @@ export default function ReportsTable({ reports, onDelete }: ReportsTableProps) {
                     style: "currency",
                     currency: "IDR",
                     maximumFractionDigits: 0,
-                  }).format(report.totalSales || 0)}
+                  }).format(report.total_sales || 0)}
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-2">

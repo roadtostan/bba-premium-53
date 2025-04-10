@@ -5,9 +5,9 @@ import ReportsTable from "./ReportsTable";
 import { getReports } from "@/lib/data";
 import { Report } from "@/types";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { format, subDays } from "date-fns";
 import { BarChart, CalendarDays, CheckCircle, Clock, XCircle } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { format, subDays } from "date-fns";
 
 export default function AdminDashboard() {
   const [reports, setReports] = useState<Report[]>([]);
@@ -41,12 +41,12 @@ export default function AdminDashboard() {
   // Calculate daily report count (for trend)
   const today = new Date();
   const reportsToday = reports.filter(
-    r => r.createdAt && new Date(r.createdAt).toDateString() === today.toDateString()
+    r => r.created_at && new Date(r.created_at).toDateString() === today.toDateString()
   ).length;
 
   const yesterday = subDays(today, 1);
   const reportsYesterday = reports.filter(
-    r => r.createdAt && new Date(r.createdAt).toDateString() === yesterday.toDateString()
+    r => r.created_at && new Date(r.created_at).toDateString() === yesterday.toDateString()
   ).length;
 
   // Calculate trend percentage
