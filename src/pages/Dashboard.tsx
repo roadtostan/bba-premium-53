@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useIsMobile } from "@/hooks/use-mobile";
 import RejectDialog from "@/components/RejectDialog";
+import AdminDashboard from "@/components/AdminDashboard";
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -32,6 +33,11 @@ export default function Dashboard() {
   useEffect(() => {
     async function loadData() {
       if (user) {
+        // If user is super_admin, the data will be loaded directly in AdminDashboard component
+        if (user.role === "super_admin") {
+          return;
+        }
+
         const [reportsData, pendingData] = await Promise.all([
           getReportsByUser(user.id),
           getPendingActionReports(user.id),
@@ -62,6 +68,24 @@ export default function Dashboard() {
 
   if (!user) {
     return <div>Loading...</div>;
+  }
+
+  // Render the admin dashboard for super_admin
+  if (user.role === "super_admin") {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-900 animate-fadeIn">
+        <NavBar />
+        <main className="container mx-auto px-4 py-8">
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold">Dashboard Admin</h1>
+            <p className="text-muted-foreground">
+              Selamat datang, {user.name}
+            </p>
+          </div>
+          <AdminDashboard />
+        </main>
+      </div>
+    );
   }
 
   // Branch users are now redirected directly to create report page in App.tsx
@@ -249,14 +273,6 @@ export default function Dashboard() {
                     >
                       Semua
                     </TabsTrigger>
-                    {/* {user.role === "branch_user" && (
-                      <TabsTrigger
-                        value="draft"
-                        className="data-[state=active]:border-b-2 data-[state=active]:border-primary whitespace-nowrap"
-                      >
-                        Draf
-                      </TabsTrigger>
-                    )} */}
                     <TabsTrigger
                       value="pending"
                       className="data-[state=active]:border-b-2 data-[state=active]:border-primary whitespace-nowrap"
