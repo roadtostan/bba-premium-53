@@ -56,8 +56,8 @@ export async function canEditReport(userId: string, reportId: string): Promise<b
       .eq("id", reportId)
       .single();
     
-    if (reportError) {
-      console.error("Error getting report status:", reportError);
+    if (reportError || !report) {
+      console.error("Error getting report details:", reportError);
       return false;
     }
     
@@ -68,7 +68,7 @@ export async function canEditReport(userId: string, reportId: string): Promise<b
       .eq("id", userId)
       .single();
     
-    if (userError) {
+    if (userError || !userData) {
       console.error("Error getting user data:", userError);
       return false;
     }
@@ -80,7 +80,7 @@ export async function canEditReport(userId: string, reportId: string): Promise<b
       return true;
     }
     
-    // For subdistrict_admin, allow them to edit rejected reports as well
+    // For subdistrict_admin, specifically check if they are admin of report's subdistrict
     if (userRole === 'subdistrict_admin') {
       // First, get the subdistrict name for the report
       const { data: subdistrict, error: subdistrictError } = await supabase
@@ -89,13 +89,20 @@ export async function canEditReport(userId: string, reportId: string): Promise<b
         .eq("id", report.subdistrict_id)
         .single();
       
-      if (subdistrictError) {
+      if (subdistrictError || !subdistrict) {
         console.error("Error getting subdistrict name:", subdistrictError);
         return false;
       }
       
-      // Check if user is admin of this subdistrict and if report is not approved
+      console.log("Checking subdistrict admin permissions:", {
+        userSubdistrict: userData.subdistrict,
+        reportSubdistrict: subdistrict.name,
+        reportStatus: report.status
+      });
+      
+      // Allow subdistrict admins to edit reports in their subdistrict that are not approved
       if (userData.subdistrict === subdistrict.name && report.status !== 'approved') {
+        console.log("Subdistrict admin has edit permission");
         return true;
       }
     }
@@ -134,13 +141,8 @@ export async function getReportLocationData(reportId: string): Promise<ReportLoc
       .eq("id", reportId)
       .single();
     
-    if (error) {
+    if (error || !data) {
       console.error("Error using direct query for location data:", error);
-      return null;
-    }
-    
-    if (!data) {
-      console.error("No report found with ID:", reportId);
       return null;
     }
     
@@ -171,7 +173,7 @@ export async function canDeleteReport(userId: string, reportId: string): Promise
       .eq("id", userId)
       .single();
     
-    if (userError) {
+    if (userError || !userData) {
       console.error("Error getting user role:", userError);
       return false;
     }
@@ -190,8 +192,8 @@ export async function canDeleteReport(userId: string, reportId: string): Promise
       .eq("id", reportId)
       .single();
     
-    if (reportError) {
-      console.error("Error getting report status:", reportError);
+    if (reportError || !report) {
+      console.error("Error getting report details:", reportError);
       return false;
     }
     
@@ -204,7 +206,7 @@ export async function canDeleteReport(userId: string, reportId: string): Promise
         .eq("id", report.subdistrict_id)
         .single();
       
-      if (subdistrictError) {
+      if (subdistrictError || !subdistrict) {
         console.error("Error getting subdistrict name:", subdistrictError);
         return false;
       }
