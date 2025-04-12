@@ -33,12 +33,10 @@ import {
   addReportComment,
   approveReport,
   rejectReport,
+  canEditReport,
 } from "./reports";
 
 import { testSupabaseConnection } from "./utils";
-
-// Import the canEditReport function directly from data.ts
-import { canEditReport } from "../data";
 
 export {
   // Auth

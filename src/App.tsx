@@ -46,7 +46,7 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
-// Branch user redirect (updated to prevent infinite loop)
+// Branch user redirect (new component)
 const HomeRedirect = () => {
   const { user, isLoading } = useAuth();
   
@@ -59,9 +59,8 @@ const HomeRedirect = () => {
   }
   
   // Redirect branch users directly to report creation
-  // without any additional checks that might cause infinite loops
   if (user.role === 'branch_user') {
-    return <Navigate to="/create-report" replace />;
+    return <Navigate to="/create-report" />;
   }
   
   // Other roles go to dashboard

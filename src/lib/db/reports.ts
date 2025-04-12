@@ -194,6 +194,31 @@ export async function checkCanCreateReport(userId: string): Promise<boolean> {
   }
 }
 
+export async function canEditReport(
+  userId: string,
+  reportId: string
+): Promise<boolean> {
+  try {
+    console.log(`Checking edit permissions for report ${reportId} and user ${userId}`);
+    
+    const { data, error } = await supabase.rpc("can_edit_report", {
+      p_user_id: userId,
+      p_report_id: reportId,
+    });
+
+    if (error) {
+      console.error("Error checking edit permission:", error);
+      return false;
+    }
+
+    console.log("RPC can_edit_report result:", data);
+    return !!data;
+  } catch (error) {
+    console.error("Error in canEditReport:", error);
+    return false;
+  }
+}
+
 export async function createReport(reportData: any) {
   try {
     if (
