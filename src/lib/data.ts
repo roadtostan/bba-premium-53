@@ -49,10 +49,10 @@ export async function canEditReport(userId: string, reportId: string): Promise<b
       return false;
     }
     
-    // Get the report details
+    // Get the report details with proper error handling
     const { data: report, error: reportError } = await supabase
       .from("reports")
-      .select("status, created_by, branch_manager, subdistrict_id, city_id")
+      .select("status, branch_manager, subdistrict_id, city_id")
       .eq("id", reportId)
       .single();
     
@@ -102,7 +102,7 @@ export async function canEditReport(userId: string, reportId: string): Promise<b
     
     // Branch user can edit their own reports that are in draft or rejected status
     if (userRole === 'branch_user' && 
-       (report.branch_manager === userId || report.created_by === userId) &&
+       report.branch_manager === userId &&
        (report.status === 'draft' || report.status === 'rejected')) {
       return true;
     }
