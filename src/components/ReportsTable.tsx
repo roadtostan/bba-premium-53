@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Report, ReportStatus } from "@/types";
 import { format } from "date-fns";
 import { id as indonesianLocale } from "date-fns/locale";
@@ -18,6 +18,7 @@ import { Eye, FileEdit, Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { canEditReport, canDeleteReport, deleteReport } from "@/lib/data";
 import { toast } from "sonner";
+import { useAuth } from "./AuthContext";
 
 // Helper function to get status badge
 const getStatusBadge = (status: ReportStatus) => {
@@ -44,22 +45,49 @@ interface ReportsTableProps {
 
 export default function ReportsTable({ reports, onDelete }: ReportsTableProps) {
   const [loading, setLoading] = useState<Record<string, boolean>>({});
+  const [editPermissions, setEditPermissions] = useState<Record<string, boolean>>({});
+  const [deletePermissions, setDeletePermissions] = useState<Record<string, boolean>>({});
+  const { user } = useAuth();
+  
+  // Check permissions for all reports when the component mounts or reports change
+  useEffect(() => {
+    const checkPermissions = async () => {
+      if (!user) return;
+      
+      const newEditPermissions: Record<string, boolean> = {};
+      const newDeletePermissions: Record<string, boolean> = {};
+      
+      for (const report of reports) {
+        try {
+          const canEdit = await canEditReport(user.id, report.id);
+          newEditPermissions[report.id] = canEdit;
+          
+          const canDelete = await canDeleteReport(user.id, report.id);
+          newDeletePermissions[report.id] = canDelete;
+        } catch (error) {
+          console.error(`Error checking permissions for report ${report.id}:`, error);
+          newEditPermissions[report.id] = false;
+          newDeletePermissions[report.id] = false;
+        }
+      }
+      
+      setEditPermissions(newEditPermissions);
+      setDeletePermissions(newDeletePermissions);
+    };
+    
+    checkPermissions();
+  }, [reports, user]);
 
   // Handle report deletion
-  const handleDelete = async (reportId: string, userId: string) => {
+  const handleDelete = async (reportId: string) => {
+    if (!user) return;
+    
     if (!window.confirm("Yakin ingin menghapus laporan ini?")) {
       return;
     }
 
     setLoading((prev) => ({ ...prev, [reportId]: true }));
     try {
-      // Check if user can delete this report
-      const canDelete = await canDeleteReport(userId, reportId);
-      if (!canDelete) {
-        toast.error("Anda tidak memiliki izin untuk menghapus laporan ini");
-        return;
-      }
-
       await deleteReport(reportId);
       toast.success("Laporan berhasil dihapus");
       if (onDelete) onDelete(reportId);
@@ -127,7 +155,7 @@ export default function ReportsTable({ reports, onDelete }: ReportsTableProps) {
                       </Button>
                     </Link>
 
-                    {canEditReport(report.createdBy || "", report.id) && (
+                    {editPermissions[report.id] && (
                       <Link to={`/edit-report/${report.id}`}>
                         <Button size="sm" variant="outline">
                           <FileEdit className="h-4 w-4" />
@@ -136,16 +164,18 @@ export default function ReportsTable({ reports, onDelete }: ReportsTableProps) {
                       </Link>
                     )}
 
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="text-destructive hover:bg-destructive/10"
-                      onClick={() => handleDelete(report.id, report.createdBy || "")}
-                      disabled={loading[report.id]}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      <span className="sr-only">Delete</span>
-                    </Button>
+                    {deletePermissions[report.id] && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-destructive hover:bg-destructive/10"
+                        onClick={() => handleDelete(report.id)}
+                        disabled={loading[report.id]}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        <span className="sr-only">Delete</span>
+                      </Button>
+                    )}
                   </div>
                 </TableCell>
               </TableRow>

@@ -37,68 +37,77 @@ export {
   rejectReport,
 } from "./db";
 
-// Function to check if a user can edit a specific report using the RPC function
+// Function to check if a user can edit a specific report - avoiding recursion
 export async function canEditReport(userId: string, reportId: string): Promise<boolean> {
   try {
-    console.log("Checking edit permissions via RPC for report:", reportId, "and user:", userId);
+    console.log("Checking edit permissions for report:", reportId, "and user:", userId);
     
-    // Get the user's role first
-    const { data: userData, error: userError } = await supabase.auth.getUser();
+    // Get user data directly from auth session to avoid recursion
+    const { data: session } = await supabase.auth.getSession();
+    if (!session?.session) {
+      console.error("No active session found");
+      return false;
+    }
+    
+    // Get the report details
+    const { data: report, error: reportError } = await supabase
+      .from("reports")
+      .select("status, created_by, branch_manager, subdistrict_id, city_id")
+      .eq("id", reportId)
+      .single();
+    
+    if (reportError) {
+      console.error("Error getting report status:", reportError);
+      return false;
+    }
+    
+    // Get user role and location info directly to avoid recursion
+    const { data: userData, error: userError } = await supabase
+      .from("users")
+      .select("role, subdistrict, city")
+      .eq("id", userId)
+      .single();
+    
     if (userError) {
-      console.error("Error getting current user:", userError);
+      console.error("Error getting user data:", userError);
       return false;
     }
     
-    const { data: userRole, error: roleError } = await supabase.rpc("get_user_role", {
-      user_id: userData.user.id
-    });
-    
-    if (roleError) {
-      console.error("Error getting user role:", roleError);
-      return false;
-    }
+    const userRole = userData.role;
     
     // Super admin can edit any report
     if (userRole === 'super_admin') {
       return true;
     }
     
-    // For subdistrict_admin, check if report is approved
+    // For subdistrict_admin, allow them to edit rejected reports as well
     if (userRole === 'subdistrict_admin') {
-      const { data: report, error: reportError } = await supabase
-        .from("reports")
-        .select("status")
-        .eq("id", reportId)
+      // First, get the subdistrict name for the report
+      const { data: subdistrict, error: subdistrictError } = await supabase
+        .from("subdistricts")
+        .select("name")
+        .eq("id", report.subdistrict_id)
         .single();
       
-      if (reportError) {
-        console.error("Error getting report status:", reportError);
+      if (subdistrictError) {
+        console.error("Error getting subdistrict name:", subdistrictError);
         return false;
       }
       
-      // Subdistrict admin cannot edit approved reports
-      // But should be able to edit rejected reports to resubmit them
-      if (report.status === 'approved') {
-        return false;
+      // Check if user is admin of this subdistrict and if report is not approved
+      if (userData.subdistrict === subdistrict.name && report.status !== 'approved') {
+        return true;
       }
-      
-      // For rejected or pending reports, return true
+    }
+    
+    // Branch user can edit their own reports that are in draft or rejected status
+    if (userRole === 'branch_user' && 
+       (report.branch_manager === userId || report.created_by === userId) &&
+       (report.status === 'draft' || report.status === 'rejected')) {
       return true;
     }
     
-    // For other cases, use the can_edit_report RPC function
-    const { data, error } = await supabase.rpc("can_edit_report", {
-      p_user_id: userId,
-      p_report_id: reportId,
-    });
-    
-    if (error) {
-      console.error("Error checking edit permission:", error);
-      return false;
-    }
-    
-    console.log("canEditReport result:", data);
-    return !!data;
+    return false;
   } catch (error) {
     console.error("Error in canEditReport:", error);
     return false;
@@ -118,7 +127,7 @@ export async function getReportLocationData(reportId: string): Promise<ReportLoc
   try {
     console.log("Getting report location data for report:", reportId);
     
-    // First, try the direct query approach
+    // Direct query approach
     const { data, error } = await supabase
       .from("reports")
       .select("branch_id, subdistrict_id, city_id")
@@ -127,29 +136,7 @@ export async function getReportLocationData(reportId: string): Promise<ReportLoc
     
     if (error) {
       console.error("Error using direct query for location data:", error);
-      
-      // If direct query fails, try using a safer approach 
-      // We no longer use RPC since it's causing type issues
-      const { data: reportData, error: reportError } = await supabase
-        .from("reports")
-        .select("branch_id, subdistrict_id, city_id")
-        .eq("id", reportId)
-        .single();
-      
-      if (reportError) {
-        console.error("Error getting report location data:", reportError);
-        return null;
-      }
-      
-      // Convert to our expected type
-      const locationData: ReportLocationData = {
-        branch_id: reportData.branch_id,
-        subdistrict_id: reportData.subdistrict_id,
-        city_id: reportData.city_id
-      };
-      
-      console.log("Location data retrieved via alternative method:", locationData);
-      return locationData;
+      return null;
     }
     
     if (!data) {
@@ -165,52 +152,77 @@ export async function getReportLocationData(reportId: string): Promise<ReportLoc
   }
 }
 
-// Function to check if a user can delete a specific report
+// Function to check if a user can delete a specific report - avoiding recursion
 export async function canDeleteReport(userId: string, reportId: string): Promise<boolean> {
   try {
     console.log("Checking delete permissions for report:", reportId, "and user:", userId);
     
-    // First get user role
-    const { data: userData, error: userError } = await supabase.auth.getUser();
+    // Get user data directly from auth session to avoid recursion
+    const { data: session } = await supabase.auth.getSession();
+    if (!session?.session) {
+      console.error("No active session found");
+      return false;
+    }
+    
+    // Get user role directly to avoid recursion
+    const { data: userData, error: userError } = await supabase
+      .from("users")
+      .select("role, subdistrict")
+      .eq("id", userId)
+      .single();
+    
     if (userError) {
-      console.error("Error getting current user:", userError);
+      console.error("Error getting user role:", userError);
       return false;
     }
     
-    const { data: userRole, error: roleError } = await supabase.rpc("get_user_role", {
-      user_id: userData.user.id
-    });
-    
-    if (roleError) {
-      console.error("Error getting user role:", roleError);
-      return false;
-    }
+    const userRole = userData.role;
     
     // Super admin can delete any report
     if (userRole === 'super_admin') {
       return true;
     }
     
-    // If user is subdistrict_admin, check report status
+    // Get the report details
+    const { data: report, error: reportError } = await supabase
+      .from("reports")
+      .select("status, branch_manager, subdistrict_id")
+      .eq("id", reportId)
+      .single();
+    
+    if (reportError) {
+      console.error("Error getting report status:", reportError);
+      return false;
+    }
+    
+    // If user is subdistrict_admin, check report status and subdistrict
     if (userRole === 'subdistrict_admin') {
-      const { data: report, error: reportError } = await supabase
-        .from("reports")
-        .select("status")
-        .eq("id", reportId)
+      // Get the subdistrict name for the report
+      const { data: subdistrict, error: subdistrictError } = await supabase
+        .from("subdistricts")
+        .select("name")
+        .eq("id", report.subdistrict_id)
         .single();
       
-      if (reportError) {
-        console.error("Error getting report status:", reportError);
+      if (subdistrictError) {
+        console.error("Error getting subdistrict name:", subdistrictError);
         return false;
       }
       
-      // Subdistrict admin can't delete approved reports
-      return report.status !== 'approved';
+      // Subdistrict admin can delete reports in their subdistrict that are NOT approved
+      if (userData.subdistrict === subdistrict.name && report.status !== 'approved') {
+        return true;
+      }
     }
     
-    // For other roles, use the can_edit_report function as a base permission check
-    // This ensures branch users can only delete their own reports in draft/rejected status
-    return await canEditReport(userId, reportId);
+    // Branch user can delete their own reports that are in draft or rejected status
+    if (userRole === 'branch_user' && 
+        report.branch_manager === userId && 
+        (report.status === 'draft' || report.status === 'rejected')) {
+      return true;
+    }
+    
+    return false;
   } catch (error) {
     console.error("Error in canDeleteReport:", error);
     return false;
